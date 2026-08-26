@@ -159,8 +159,67 @@ async function loadAll(silent=false){
   finally{syncBusy=false}
 }
 
-function renderJurisdiction(){jurisdictionLayers.forEach(x=>map.removeLayer(x));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const core=L.rectangle([[a.south,a.west],[a.north,a.east]],{color:'#16834b',weight:2,fillColor:'#16834b',fillOpacity:.035,dashArray:null,interactive:false}).addTo(map);const sw=metersToLatLng_(a.bufferM);const near=L.rectangle([[a.south-sw.lat,a.west-sw.lng],[a.north+sw.lat,a.east+sw.lng]],{color:'#d39b00',weight:1,dashArray:'6 6',fill:false,interactive:false}).addTo(map);jurisdictionLayers.push(core,near)});}
-function metersToLatLng_(m){const latDeg=m/111320;const lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));return {lat:latDeg,lng:lngDeg}}
+function renderJurisdiction(){
+  jurisdictionLayers.forEach(x=>{
+    try{ map.removeLayer(x); }catch(e){}
+  });
+  jurisdictionLayers=[];
+
+  if(!Array.isArray(jurisdictionData)) return;
+
+  jurisdictionData.forEach(a=>{
+    const south=Number(a.south);
+    const west=Number(a.west);
+    const north=Number(a.north);
+    const east=Number(a.east);
+    const bufferM=Number(a.bufferM)||200;
+
+    // 座標が未設定の管轄区域は描画しない
+    if(
+      !Number.isFinite(south) ||
+      !Number.isFinite(west) ||
+      !Number.isFinite(north) ||
+      !Number.isFinite(east) ||
+      south < 20 || south > 46 ||
+      north < 20 || north > 46 ||
+      west < 122 || west > 154 ||
+      east < 122 || east > 154 ||
+      south >= north ||
+      west >= east
+    ){
+      return;
+    }
+
+    const core=L.rectangle(
+      [[south,west],[north,east]],
+      {
+        color:'#16834b',
+        weight:2,
+        fillColor:'#16834b',
+        fillOpacity:.035,
+        interactive:false
+      }
+    ).addTo(map);
+
+    const sw=metersToLatLng_(bufferM);
+
+    const near=L.rectangle(
+      [
+        [south-sw.lat,west-sw.lng],
+        [north+sw.lat,east+sw.lng]
+      ],
+      {
+        color:'#d39b00',
+        weight:1,
+        dashArray:'6 6',
+        fill:false,
+        interactive:false
+      }
+    ).addTo(map);
+
+    jurisdictionLayers.push(core,near);
+  });
+}
 function clearOverlays(){Object.values(waterMarkers).forEach(m=>map.removeLayer(m));Object.values(overlayMarkers).forEach(m=>map.removeLayer(m));waterMarkers={};overlayMarkers={}}
 function color(w){return w.status==='使用可能'?'#18a957':w.status==='消防署使用中'?'#f59e0b':w.status==='使用困難'?'#ff3b30':'#d99a00'}
 function addWaterMarker(w){const opacity=w.zone==='周辺'?.72:1;const i=L.divIcon({className:'',html:`<div style="opacity:${opacity};width:28px;height:28px;border-radius:50%;background:${color(w)};border:3px solid #fff;box-shadow:0 2px 8px #0008;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff">${w.zone==='周辺'?'•':''}</div>`,iconSize:[28,28],iconAnchor:[14,14]});const m=L.marker([w.lat,w.lng],{icon:i,title:w.type}).addTo(map);m.on('click',()=>showWater(w));waterMarkers[w.id]=m}
