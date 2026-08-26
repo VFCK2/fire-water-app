@@ -80,7 +80,7 @@
    API_URL はデプロイしたApps ScriptウェブアプリURLに変更してください。
    GitHub PagesからGASを直接fetchせず、JSONPで読み書きします（テスト運用向け）。
 */
-const API_URL='__GAS_API_URL__';
+const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 function api(action, params={}){
   return new Promise((resolve,reject)=>{
     const cb='jsonp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
