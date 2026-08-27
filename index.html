@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v15</title>
+<title>消防団 現場支援マップ v19</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{
@@ -84,6 +84,24 @@ font-weight:800;box-shadow:var(--shadow);display:none}
 .searchbar .btn{height:34px;min-width:48px;padding:6px 9px;font-size:12px;border-radius:9px;}
 .topcard.address-hidden .searchbar{display:none;}
 
+/* ===== v19 スマホ表示調整 ===== */
+@media(max-width:699px){
+ .topbar{top:calc(env(safe-area-inset-top) + 7px);left:10px;right:10px;}
+ .topcard{border-radius:16px;padding:8px 10px;}
+ .title{font-size:16px;line-height:1.15;}
+ .subtitle{font-size:11px;margin-top:2px;line-height:1.2;}
+ .searchbar{gap:5px;margin-top:4px;}
+ .searchbar .input{height:32px;padding:5px 8px;font-size:12px;border-radius:8px;}
+ .searchbar .btn{height:32px;min-width:46px;padding:5px 8px;font-size:12px;border-radius:8px;}
+ .topcard>div:last-child{margin-top:5px!important;gap:5px!important;}
+ .coverage-note{font-size:10px;margin-top:0;line-height:1.2;}
+ .topcard .btn-light{height:30px;padding:5px 8px!important;font-size:10px!important;border-radius:9px;}
+ .stats{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 68px);gap:5px;padding:2px;z-index:1100;}
+ .chip{padding:7px 9px;border-radius:12px;font-size:11px;}
+ .chip b{font-size:13px;}
+ #toast{bottom:calc(env(safe-area-inset-bottom) + 112px);}
+}
+
 </style>
 </head>
 <body>
@@ -113,7 +131,7 @@ font-weight:800;box-shadow:var(--shadow);display:none}
  <button class="fab" onclick="openManageMenu()" title="管理">☰</button>
 </div>
 
-<div class="legend">🔥 火災　🔴 消火栓　🔵 防火水槽<br>🚒 消防車　⛔ 通行不能　🟡 周辺水利</div>
+<div class="legend">🔥 火災　● 消火栓　⭐ 防火水槽<br>🚒 消防車　⛔ 通行不能　🟡 周辺水利</div>
 <div id="stats" class="stats hidden"></div>
 
 <div id="waterSheet" class="sheet hidden">
@@ -207,7 +225,7 @@ font-weight:800;box-shadow:var(--shadow);display:none}
 <script>
 /* Google Maps version v17 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
-const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
+const GOOGLE_MAPS_BROWSER_KEY='YOUR_GOOGLE_MAPS_BROWSER_KEY';
 
 function api(action, params={}){
  return new Promise((resolve,reject)=>{
@@ -294,22 +312,11 @@ function clearOverlays(){Object.values(waterMarkers).forEach(m=>m.setMap(null));
 function clearRoute(){if(routeLayer){routeLayer.setMap(null);routeLayer=null}}
 function color(w){return w.status==='使用可能'?'#18a957':w.status==='消防署使用中'?'#f59e0b':w.status==='使用困難'?'#ff3b30':'#d99a00'}
 
-const WATER_STAR_PATH='M 0,-1 L 0.2245,-0.309 L 0.9511,-0.309 L 0.3633,0.118 L 0.5878,0.809 L 0,0.382 L -0.5878,0.809 L -0.3633,0.118 L -0.9511,-0.309 L -0.2245,-0.309 Z';
-
-function waterMarkerIcon(w){
- const isTank=String(w.type).indexOf('防火水槽')>=0;
- return {
-  path:isTank?WATER_STAR_PATH:google.maps.SymbolPath.CIRCLE,
-  scale:isTank?12:10,
-  fillColor:color(w),
-  fillOpacity:w.zone==='周辺'?.72:1,
-  strokeColor:'#fff',
-  strokeWeight:3
- };
-}
-
 function addWaterMarker(w){
- const marker=new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:100+(w.zone==='周辺'?0:10),icon:waterMarkerIcon(w)});
+ const isTank=String(w.type||'').indexOf('防火水槽')>=0;
+ const marker=isTank
+  ? new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:110+(w.zone==='周辺'?0:10),label:{text:'★',color:color(w),fontSize:'27px',fontWeight:'900'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:18,fillColor:'#ffffff',fillOpacity:0,strokeColor:'#ffffff',strokeWeight:0}})
+  : new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:100+(w.zone==='周辺'?0:10),icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:color(w),fillOpacity:w.zone==='周辺'?.72:1,strokeColor:'#fff',strokeWeight:3}});
  marker.addListener('click',()=>showWater(w));waterMarkers[w.id]=marker;
 }
 function addWaterMarkerRefresh(w){if(waterMarkers[w.id])waterMarkers[w.id].setMap(null);addWaterMarker(w)}
