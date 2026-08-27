@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v23</title>
+<title>消防団 現場支援マップ v24</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -156,7 +156,7 @@ button:disabled{opacity:.55;cursor:wait}
 </div>
 
 <script>
-/* Google Maps version v23 */
+/* Google Maps version v22 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -302,7 +302,8 @@ function onMapClick(e){
   const mode=addingMode,name=mode==='loader'?'積載車':'消防車';
   addingMode=null;$('markerMode').style.display='none';
 
-  // タップ直後のマーカーをそのまま表示し、保存成功時も消さずに正式IDへ引き継ぐ。
+  // タップ直後のマーカーを表示し、保存成功時も同じMarkerを使い続ける。
+  // 仮マーカーを一度消して描き直さないため、一瞬消える問題を防止。
   const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};
   addIncidentMarker(temp);
   showToast(name+'を保存中…');
@@ -326,7 +327,6 @@ function onMapClick(e){
    }
    setWaterMarkersClickable(true);
   }).catch(err=>{
-   // 保存失敗時だけ仮マーカーを削除
    if(overlayMarkers[temp.markerId]){
     overlayMarkers[temp.markerId].setMap(null);
     delete overlayMarkers[temp.markerId];
