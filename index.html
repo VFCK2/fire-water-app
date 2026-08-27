@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v26</title>
+<title>消防団 現場支援マップ v27</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -151,17 +151,17 @@ body.marker-placement #map{cursor:crosshair}
   <button class="close" onclick="closeSheet('manageSheet')">×</button>
  </div>
  <div class="actiongrid">
-  
+  <button class="btn btn-blue" onclick="refreshFromManage()">🔄 最新情報</button>
   <button class="btn btn-red" onclick="confirmEndIncident()">🛑 現場終了</button>
  </div>
- 
+
 </div>
 
 <div id="toast"></div>
 </div>
 
 <script>
-/* Google Maps version v26 */
+/* Google Maps version v27 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -185,7 +185,7 @@ let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdict
 let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false;
 const defaultCenter={lat:35.5572,lng:139.7330};
 const $=id=>document.getElementById(id);
-const CACHE_KEY='fireWaterActiveIncident_v26';
+const CACHE_KEY='fireWaterActiveIncident_v27';
 function saveLocalSnapshot(markers){try{if(!incident)return;localStorage.setItem(CACHE_KEY,JSON.stringify({incident,waterData,markers:markers||[],savedAt:Date.now()}));}catch(e){}}
 function getLocalSnapshot(){try{const raw=localStorage.getItem(CACHE_KEY);return raw?JSON.parse(raw):null}catch(e){return null}}
 function clearLocalSnapshot(){try{localStorage.removeItem(CACHE_KEY)}catch(e){}}
@@ -230,7 +230,18 @@ function focusAddress(){const el=$('address');if(el){el.focus();el.select()}}
 $('address').addEventListener('keydown',e=>{if(e.key==='Enter')searchFire()});
 
 async function loadWaterInfo(){return null}
-async function refreshSharedState(){if(!incident){await loadWaterInfo();return}await loadAll(false);showToast('最新状態を取得しました')}
+async function refreshSharedState(){
+  if(!incident){await loadWaterInfo();return}
+  await loadAll(false);
+  showToast('最新状態を取得しました');
+}
+async function refreshFromManage(){
+  if(!incident){showToast('現場がありません');return}
+  closeSheet('manageSheet');
+  showToast('最新情報を取得中…');
+  await loadAll(false);
+  showToast('✓ 最新情報を取得しました');
+}
 function startSharedPolling(){stopSharedPolling();syncTimer=setInterval(()=>{if(document.hidden||!incident||syncBusy)return;loadAll(true)},10000)}
 function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}}
 
@@ -336,9 +347,9 @@ function cancelMarkerMode(){
  setPlacementMode(false);
 }
 
-function onMapClick(e){if(!addingMode)return;const lat=e.latLng.lat(),lng=e.latLng.lng();if(addingMode==='truck'||addingMode==='loader'){const mode=addingMode,name=mode==='loader'?'積載車':'消防車';addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};addIncidentMarker(temp);api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{if(!m)return;const saved=typeof m==='string'?{...temp,markerId:m}:m;const marker=overlayMarkers[temp.markerId];if(marker){marker.setPosition({lat:Number(saved.lat),lng:Number(saved.lng)});marker.setTitle(saved.name||name);marker.setClickable(true);delete overlayMarkers[temp.markerId];overlayMarkers[saved.markerId]=marker;marker.clearListeners('click');marker.addListener('click',()=>showMarkerInfo(saved));}else addIncidentMarker(saved);saveLocalSnapshot(currentMarkerObjects());showToast(name+'を登録しました');}).catch(err=>{if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}alert('マーカーを保存できませんでした。\n'+(err.message||err))});return;}if(addingMode==='road'){tempRoad.push({lat,lng});if(tempLine)tempLine.setMap(null);tempLine=new google.maps.Polyline({map,path:tempRoad,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:false});}}
+function onMapClick(e){if(!addingMode)return;const lat=e.latLng.lat(),lng=e.latLng.lng();if(addingMode==='truck'||addingMode==='loader'){const mode=addingMode,name=mode==='loader'?'積載車':'消防車';addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};addIncidentMarker(temp);api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{if(!m)return;const saved=typeof m==='string'?{...temp,markerId:m}:m;const marker=overlayMarkers[temp.markerId];if(marker){marker.setPosition({lat:Number(saved.lat),lng:Number(saved.lng)});marker.setTitle(saved.name||name);marker.setClickable(true);delete overlayMarkers[temp.markerId];overlayMarkers[saved.markerId]=marker;google.maps.event.clearListeners(marker,'click');marker.addListener('click',()=>showMarkerInfo(saved));}else addIncidentMarker(saved);saveLocalSnapshot(currentMarkerObjects());showToast(name+'を登録しました');}).catch(err=>{if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}alert('マーカーを保存できませんでした。\n'+(err.message||err))});return;}if(addingMode==='road'){tempRoad.push({lat,lng});if(tempLine)tempLine.setMap(null);tempLine=new google.maps.Polyline({map,path:tempRoad,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:false});}}
 function currentMarkerObjects(){return Object.keys(overlayMarkers).filter(id=>!String(id).startsWith('TEMP_')).map(id=>{const o=overlayMarkers[id];if(o instanceof google.maps.Polyline){const path=o.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));return{markerId:id,type:'road',name:'通行止め区間',lat:path[0]?.lat||0,lng:path[0]?.lng||0,status:JSON.stringify(path),geometry:JSON.stringify(path)};}const pos=o.getPosition(),title=o.getTitle()||'',type=title.indexOf('積載車')>=0?'loader':'truck';return{markerId:id,type,name:title,lat:pos.lat(),lng:pos.lng(),status:''};});}
-async function finishRoad(){if(tempRoad.length<2){alert('道路に沿って2点以上タップしてください。');return}const path=tempRoad.slice(),c=path[Math.floor(path.length/2)];try{const m=await api('addMarker',{type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path)});if(!m)return;const saved=typeof m==='string'?{markerId:m,type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path),geometry:JSON.stringify(path)}:m;if(tempLine){tempLine.setPath(path);tempLine.setOptions({clickable:true});tempLine.clearListeners('click');tempLine.addListener('click',()=>showMarkerInfo(saved));overlayMarkers[saved.markerId]=tempLine;tempLine=null;}else addIncidentMarker(saved);tempRoad=[];addingMode=null;setPlacementMode(false);$('drawSheet').classList.add('hidden');$('markerMode').style.display='none';saveLocalSnapshot(currentMarkerObjects());showToast('通行止めを登録しました');}catch(e){alert('通行止めを保存できませんでした。\n'+(e.message||e))}}
+async function finishRoad(){if(tempRoad.length<2){alert('道路に沿って2点以上タップしてください。');return}const path=tempRoad.slice(),c=path[Math.floor(path.length/2)];try{const m=await api('addMarker',{type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path)});if(!m)return;const saved=typeof m==='string'?{markerId:m,type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path),geometry:JSON.stringify(path)}:m;if(tempLine){tempLine.setPath(path);tempLine.setOptions({clickable:true});google.maps.event.clearListeners(tempLine,'click');tempLine.addListener('click',()=>showMarkerInfo(saved));overlayMarkers[saved.markerId]=tempLine;tempLine=null;}else addIncidentMarker(saved);tempRoad=[];addingMode=null;setPlacementMode(false);$('drawSheet').classList.add('hidden');$('markerMode').style.display='none';saveLocalSnapshot(currentMarkerObjects());showToast('通行止めを登録しました');}catch(e){alert('通行止めを保存できませんでした。\n'+(e.message||e))}}
 function cancelDraw(){cancelMarkerMode()}
 function addIncidentMarker(m){if(!m||!m.markerId)return;const old=overlayMarkers[m.markerId];if(old){updateIncidentMarker(m);return}if(m.type==='road'){let p=[];try{p=JSON.parse(m.status||m.geometry||'[]')}catch(e){}if(p.length<2)return;const path=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));const line=new google.maps.Polyline({map,path,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:true});line.addListener('click',()=>showMarkerInfo(m));overlayMarkers[m.markerId]=line;}else{const emoji=m.type==='loader'?'🚚':'🚒';const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:m.name||emoji,label:{text:emoji,fontSize:'30px'}});marker.setClickable(!addingMode);marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});overlayMarkers[m.markerId]=marker;}}
 function showMarkerInfo(m){selectedMarker=m;$('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':'⛔ ')+(m.name||'');$('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':'通行止め区間';$('markerSheet').classList.remove('hidden')}
