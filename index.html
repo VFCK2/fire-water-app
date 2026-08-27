@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v20</title>
+<title>消防団 現場支援マップ v22</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -44,13 +44,19 @@ button:disabled{opacity:.55;cursor:wait}
 .mode{padding:8px;border-radius:10px;background:#fff4f3;color:#b42318;font-size:11px;font-weight:800}.road-help{font-size:10px;color:var(--muted);line-height:1.4;margin-top:5px}
 #markerMode{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 88px);transform:translateX(-50%);z-index:1250;background:#111315;color:#fff;padding:7px 10px;border-radius:999px;font-size:11px;font-weight:850;box-shadow:var(--shadow);display:none}
 #toast{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 68px);transform:translateX(-50%);z-index:2000;background:#111315;color:#fff;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:800;box-shadow:var(--shadow);display:none;white-space:nowrap}
+.refresh-btn{flex:none;width:42px;height:34px;border-radius:9px;background:#eceef0;color:#111315;font-size:22px;font-weight:900;line-height:1}
+.address-display{min-width:0;flex:1}
+.marker-add-sheet{z-index:1500}.marker-draw-sheet{z-index:1500}
+#markerMode{pointer-events:none}
+.marker-add-btn{touch-action:manipulation}
+
 @media(min-width:700px){.topbar{left:24px;right:auto;width:560px}.sheet{left:24px;right:auto;width:420px}.stats{left:24px;right:24px}.legend{left:24px}}
-@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px);left:8px;right:8px}.topcard{padding:7px 8px}.stats{bottom:calc(env(safe-area-inset-bottom) + 62px)}#toast{bottom:calc(env(safe-area-inset-bottom) + 105px)}}
+@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px);left:8px;right:8px}.topcard{padding:7px 8px}.stats{bottom:calc(env(safe-area-inset-bottom) + 62px)}#toast{bottom:calc(env(safe-area-inset-bottom) + 105px)}.refresh-btn{width:42px;height:40px;font-size:23px}.incident-title{gap:5px}}
 
 /* v21 mobile readability */
 .topbar{z-index:1400}.topcard{border-radius:12px}.searchbar .input{height:40px;font-size:16px}.searchbar .btn{height:40px;font-size:15px;padding:0 16px}.address-display{font-size:15px;line-height:1.3}.incident-title{min-height:36px}.chip{font-size:13px;padding:8px 10px}.chip b{font-size:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 66px);gap:6px}.chip{box-shadow:0 3px 12px rgba(0,0,0,.18)}
 .sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:9px 10px}.route-main{font-size:28px;line-height:1.1}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:10px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{grid-template-columns:1fr}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.96);border-radius:12px;padding:7px 12px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:17px;font-weight:900;color:#14548a;white-space:nowrap}.route-summary.hidden{display:none}
-@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px)}#mapControls{top:calc(env(safe-area-inset-top) + 62px);right:8px}.fab{width:44px;height:44px;font-size:21px}.stats{bottom:calc(env(safe-area-inset-bottom) + 70px)}}
+@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px)}#mapControls{top:calc(env(safe-area-inset-top) + 118px);right:8px;z-index:1600}.fab{width:50px;height:50px;font-size:24px;border-radius:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 70px)}}
 </style>
 </head>
 <body>
@@ -64,7 +70,7 @@ button:disabled{opacity:.55;cursor:wait}
    <button id="searchBtn" class="btn btn-primary" onclick="searchFire()">検索</button>
   </div>
   <div id="resultArea" class="hidden">
-   <div class="incident-title"><div id="headerSub" class="address-display"></div><span id="incidentBadge" class="chip hidden">現場中</span></div>
+   <div class="incident-title"><div id="headerSub" class="address-display"></div><button id="forceRefreshBtn" class="refresh-btn" onclick="forceRefresh()" title="強制更新">↻</button></div>
   </div>
  </div>
 </div>
@@ -150,7 +156,7 @@ button:disabled{opacity:.55;cursor:wait}
 </div>
 
 <script>
-/* Google Maps version v17 */
+/* Google Maps version v22 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -263,8 +269,15 @@ function showWaterById(id){const w=waterData.find(x=>String(x.id)===String(id));
 function openList(filter='all'){closeAllSheets();renderList(filter);$('listSheet').classList.remove('hidden')}
 
 function openAddMenu(){if(!incident){alert('先に火災住所を検索してください。');return}closeAllSheets();$('addSheet').classList.remove('hidden')}
+function setWaterMarkersClickable(enabled){
+ Object.values(waterMarkers).forEach(m=>{try{m.setClickable(enabled)}catch(e){}});
+ Object.values(overlayMarkers).forEach(m=>{try{if(m&&typeof m.setClickable==='function')m.setClickable(enabled)}catch(e){}});
+}
 function startAdd(mode){
- closeAllSheets(); addingMode=mode;
+ if(!incident){alert('先に火災住所を検索してください。');return}
+ closeAllSheets();
+ addingMode=mode;
+ setWaterMarkersClickable(false);
  $('markerMode').style.display='block';
  if(mode==='road'){
   tempRoad=[]; if(tempLine){tempLine.setMap(null);tempLine=null;}
@@ -275,19 +288,32 @@ function startAdd(mode){
   showToast(mode==='loader'?'積載車の位置をタップ':'消防車の位置をタップ');
  }
 }
-function cancelMarkerMode(){addingMode=null;tempRoad=[];if(tempLine){tempLine.setMap(null);tempLine=null}$('drawSheet').classList.add('hidden');$('markerMode').style.display='none'}
+function cancelMarkerMode(){
+ addingMode=null;tempRoad=[];
+ if(tempLine){tempLine.setMap(null);tempLine=null}
+ $('drawSheet').classList.add('hidden');
+ $('markerMode').style.display='none';
+ setWaterMarkersClickable(true);
+}
 function onMapClick(e){
  if(!addingMode)return;
  const lat=e.latLng.lat(),lng=e.latLng.lng();
  if(addingMode==='truck'||addingMode==='loader'){
-  const mode=addingMode, name=mode==='loader'?'積載車':'消防車';
+  const mode=addingMode,name=mode==='loader'?'積載車':'消防車';
   addingMode=null;$('markerMode').style.display='none';
   const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};
   addIncidentMarker(temp);
   api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{
-   if(m){if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]} addIncidentMarker(m);showToast(name+'を登録しました')}
-   else showToast('保存できませんでした');
-  }).catch(err=>{if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]} alert('マーカーを保存できませんでした。\n'+(err.message||err));});
+   if(m){
+    if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}
+    addIncidentMarker(m);showToast(name+'を登録しました');
+   }else{showToast('保存できませんでした')}
+   setWaterMarkersClickable(true);
+  }).catch(err=>{
+   if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}
+   setWaterMarkersClickable(true);
+   alert('マーカーを保存できませんでした。\n'+(err.message||err));
+  });
   return;
  }
  if(addingMode==='road'){
@@ -317,7 +343,7 @@ function addIncidentMarker(m){
  }else{
   const emoji=m.type==='loader'?'🚚':'🚒';
   const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:m.name||emoji,label:{text:emoji,fontSize:'30px'}});
-  marker.addListener('click',()=>showMarkerInfo(m));overlayMarkers[m.markerId]=marker;
+  marker.setClickable(!addingMode); marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});overlayMarkers[m.markerId]=marker;
  }
 }
 function showMarkerInfo(m){selectedMarker=m;$('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':'⛔ ')+(m.name||'');$('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':'通行止め区間';$('markerSheet').classList.remove('hidden')}
@@ -350,6 +376,21 @@ function recalcHose(){const meters=Number($('routeInfo').dataset.routeMeters||0)
 
 function confirmEndIncident(){closeSheet('manageSheet');setTimeout(endIncident,50)}
 async function endIncident(){if(!confirm('今回の現場を終了します。現場の履歴は残ります。\n本当に終了しますか？'))return;stopSharedPolling();try{await api('endIncident');incident=null;selectedWater=null;selectedMarker=null;clearRoute();if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);fireMarker=null;fireCircle=null;clearOverlays();$('incidentBadge').classList.add('hidden');$('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';$('stats').classList.add('hidden');$('address').value='';showHome();showToast('現場を終了しました')}catch(e){alert(e.message||e)}}
+
+function forceRefresh(){
+ const btn=$('forceRefreshBtn');
+ if(btn){btn.disabled=true;btn.textContent='↻';}
+ const url=new URL(window.location.href);
+ url.searchParams.set('v',Date.now().toString());
+ url.searchParams.set('refresh','1');
+ window.location.replace(url.toString());
+}
+
+// iPhone Safariの古いHTML/JSを再利用しにくくする
+try{
+ const navEntry=performance.getEntriesByType('navigation')[0];
+ if(navEntry&&navEntry.type==='reload'){/* 強制更新済み */}
+}catch(e){}
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
 loadGoogleMaps();
