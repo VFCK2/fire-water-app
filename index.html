@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v24</title>
+<title>消防団 現場支援マップ v26</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -44,7 +44,6 @@ button:disabled{opacity:.55;cursor:wait}
 .mode{padding:8px;border-radius:10px;background:#fff4f3;color:#b42318;font-size:11px;font-weight:800}.road-help{font-size:10px;color:var(--muted);line-height:1.4;margin-top:5px}
 #markerMode{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 88px);transform:translateX(-50%);z-index:1250;background:#111315;color:#fff;padding:7px 10px;border-radius:999px;font-size:11px;font-weight:850;box-shadow:var(--shadow);display:none}
 #toast{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 68px);transform:translateX(-50%);z-index:2000;background:#111315;color:#fff;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:800;box-shadow:var(--shadow);display:none;white-space:nowrap}
-.refresh-btn{flex:none;width:42px;height:34px;border-radius:9px;background:#eceef0;color:#111315;font-size:22px;font-weight:900;line-height:1}
 .address-display{min-width:0;flex:1}
 .marker-add-sheet{z-index:1500}.marker-draw-sheet{z-index:1500}
 #markerMode{pointer-events:none}
@@ -56,7 +55,7 @@ body.marker-placement #map{cursor:crosshair}
 .marker-add-btn{touch-action:manipulation}
 
 @media(min-width:700px){.topbar{left:24px;right:auto;width:560px}.sheet{left:24px;right:auto;width:420px}.stats{left:24px;right:24px}.legend{left:24px}}
-@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px);left:8px;right:8px}.topcard{padding:7px 8px}.stats{bottom:calc(env(safe-area-inset-bottom) + 62px)}#toast{bottom:calc(env(safe-area-inset-bottom) + 105px)}.refresh-btn{width:42px;height:40px;font-size:23px}.incident-title{gap:5px}}
+@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px);left:8px;right:8px}.topcard{padding:7px 8px}.stats{bottom:calc(env(safe-area-inset-bottom) + 62px)}#toast{bottom:calc(env(safe-area-inset-bottom) + 105px)}.incident-title{gap:5px}}
 
 /* v21 mobile readability */
 .topbar{z-index:1400}.topcard{border-radius:12px}.searchbar .input{height:40px;font-size:16px}.searchbar .btn{height:40px;font-size:15px;padding:0 16px}.address-display{font-size:15px;line-height:1.3}.incident-title{min-height:36px}.chip{font-size:13px;padding:8px 10px}.chip b{font-size:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 66px);gap:6px}.chip{box-shadow:0 3px 12px rgba(0,0,0,.18)}
@@ -76,7 +75,7 @@ body.marker-placement #map{cursor:crosshair}
    <button id="searchBtn" class="btn btn-primary" onclick="searchFire()">検索</button>
   </div>
   <div id="resultArea" class="hidden">
-   <div class="incident-title"><div id="headerSub" class="address-display"></div><button id="forceRefreshBtn" class="refresh-btn" onclick="forceRefresh()" title="強制更新">↻</button></div>
+   <div class="incident-title"><div id="headerSub" class="address-display"></div></div>
   </div>
  </div>
 </div>
@@ -152,7 +151,7 @@ body.marker-placement #map{cursor:crosshair}
   <button class="close" onclick="closeSheet('manageSheet')">×</button>
  </div>
  <div class="actiongrid">
-  <button class="btn btn-light" onclick="refreshSharedState();closeSheet('manageSheet')">🔄 最新状態</button>
+  
   <button class="btn btn-red" onclick="confirmEndIncident()">🛑 現場終了</button>
  </div>
  
@@ -162,9 +161,9 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v22 */
+/* Google Maps version v26 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
-const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
+const GOOGLE_MAPS_BROWSER_KEY='YOUR_GOOGLE_MAPS_BROWSER_KEY';
 
 function api(action, params={}){
  return new Promise((resolve,reject)=>{
@@ -186,6 +185,10 @@ let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdict
 let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false;
 const defaultCenter={lat:35.5572,lng:139.7330};
 const $=id=>document.getElementById(id);
+const CACHE_KEY='fireWaterActiveIncident_v26';
+function saveLocalSnapshot(markers){try{if(!incident)return;localStorage.setItem(CACHE_KEY,JSON.stringify({incident,waterData,markers:markers||[],savedAt:Date.now()}));}catch(e){}}
+function getLocalSnapshot(){try{const raw=localStorage.getItem(CACHE_KEY);return raw?JSON.parse(raw):null}catch(e){return null}}
+function clearLocalSnapshot(){try{localStorage.removeItem(CACHE_KEY)}catch(e){}}
 function showIncidentBadge(){const el=$('incidentBadge');if(el)el.classList.remove('hidden')}
 function hideIncidentBadge(){const el=$('incidentBadge');if(el)el.classList.add('hidden')}
 
@@ -207,7 +210,12 @@ async function initGoogleMap(){
   jurisdictionData=d?.jurisdiction||[];renderJurisdiction();incident=d?.incident||null;
   if(incident){renderIncident(incident);await loadAll(true)}else{showHome()}
   loadWaterInfo();startSharedPolling();setTimeout(()=>google.maps.event.trigger(map,'resize'),200);
- }catch(e){console.error(e);showHome();alert('初期データの読み込みに失敗しました。\n'+(e.message||e))}
+ }catch(e){
+  console.error(e);const cached=getLocalSnapshot();
+  if(cached&&cached.incident){
+   incident=cached.incident;renderIncident(incident);waterData=cached.waterData||[];waterData.forEach(addWaterMarker);renderStats();renderList();(cached.markers||[]).forEach(addIncidentMarker);startSharedPolling();showToast('保存済みの最新情報を表示中');
+  }else{showHome();alert('初期データの読み込みに失敗しました。\n'+(e.message||e));}
+ }
 }
 
 function loadGoogleMaps(){
@@ -236,7 +244,7 @@ async function searchFire(){
   clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
   $('headerSub').textContent=incident.address;
   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
-  waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
+  waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);saveLocalSnapshot(d.markers||[]);
   startSharedPolling();showToast('現場を開始しました');
  }catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='検索'}
 }
@@ -246,21 +254,26 @@ function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forE
  fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
  const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
 }
-async function loadAll(silent=false){if(!incident||syncBusy)return;syncBusy=true;try{const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});if(!snap)return;if(snap.incident)incident=snap.incident;clearOverlays();waterData=snap.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(snap.markers||[]).forEach(addIncidentMarker)}catch(e){console.error(e);if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e))}finally{syncBusy=false}}
-
+async function loadAll(silent=false){
+ if(!incident||syncBusy)return;syncBusy=true;
+ try{const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});if(!snap)return;if(snap.incident)incident=snap.incident;waterData=snap.water||[];reconcileWaterMarkers(waterData);reconcileIncidentMarkers(snap.markers||[]);renderStats();renderList();saveLocalSnapshot(snap.markers||[]);}
+ catch(e){console.error(e);if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e))}
+ finally{syncBusy=false}
+}
+function reconcileWaterMarkers(next){
+ const ids=new Set(next.map(w=>String(w.id)));Object.keys(waterMarkers).forEach(id=>{if(!ids.has(String(id))){try{waterMarkers[id].setMap(null)}catch(e){}delete waterMarkers[id]}});
+ next.forEach(w=>{const m=waterMarkers[w.id];if(m){m.setPosition({lat:Number(w.lat),lng:Number(w.lng)});m.setTitle(w.type||'');updateWaterMarkerVisual(m,w)}else addWaterMarker(w)});
+}
+function updateWaterMarkerVisual(marker,w){const isTank=String(w.type||'').indexOf('防火水槽')>=0;if(isTank){marker.setLabel({text:'★',color:color(w),fontSize:'27px',fontWeight:'900'});marker.setIcon({path:google.maps.SymbolPath.CIRCLE,scale:18,fillColor:'#fff',fillOpacity:0,strokeColor:'#fff',strokeWeight:0});marker.setZIndex(110+(w.zone==='周辺'?0:10));}else{marker.setIcon({path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:color(w),fillOpacity:w.zone==='周辺'?.72:1,strokeColor:'#fff',strokeWeight:3});marker.setLabel(null);marker.setZIndex(100+(w.zone==='周辺'?0:10));}}
+function reconcileIncidentMarkers(next){const ids=new Set(next.map(m=>String(m.markerId)));Object.keys(overlayMarkers).forEach(id=>{if(String(id).startsWith('TEMP_'))return;if(!ids.has(String(id))){try{overlayMarkers[id].setMap(null)}catch(e){}delete overlayMarkers[id]}});next.forEach(m=>updateIncidentMarker(m));}
+function updateIncidentMarker(m){if(!m||!m.markerId)return;const old=overlayMarkers[m.markerId];if(m.type==='road'){let p=[];try{p=JSON.parse(m.status||m.geometry||'[]')}catch(e){}if(p.length<2)return;const path=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));if(old&&old instanceof google.maps.Polyline){old.setPath(path);old.setOptions({map,clickable:true,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95});}else addIncidentMarker(m);}else{if(old&&old instanceof google.maps.Marker){old.setPosition({lat:Number(m.lat),lng:Number(m.lng)});old.setTitle(m.name||'');old.setClickable(!addingMode);}else addIncidentMarker(m);}}
 function renderJurisdiction(){jurisdictionLayers.forEach(x=>x.setMap(null));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const south=Number(a.south),west=Number(a.west),north=Number(a.north),east=Number(a.east);if(![south,west,north,east].every(isFinite))return;const core=new google.maps.Rectangle({map,bounds:{south,west,north,east},strokeColor:'#16834b',strokeWeight:2,fillColor:'#16834b',fillOpacity:.035,clickable:false});const m=Number(a.bufferM||200);const latDeg=m/111320,lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));const near=new google.maps.Rectangle({map,bounds:{south:south-latDeg,west:west-lngDeg,north:north+latDeg,east:east+lngDeg},strokeColor:'#d39b00',strokeWeight:1,strokeOpacity:1,fillOpacity:0,clickable:false});jurisdictionLayers.push(core,near)})}
 function clearOverlays(){Object.values(waterMarkers).forEach(m=>m.setMap(null));Object.values(overlayMarkers).forEach(m=>m.setMap(null));waterMarkers={};overlayMarkers={}}
 function clearRoute(){if(Array.isArray(routeLayer)){routeLayer.forEach(x=>x.setMap(null));}else if(routeLayer){routeLayer.setMap(null)}routeLayer=null;lastRouteMeters=0;$('routeSummary')?.classList.add('hidden')}
 function color(w){return w.status==='使用可能'?'#18a957':w.status==='消防署使用中'?'#f59e0b':w.status==='使用困難'?'#ff3b30':'#d99a00'}
 
-function addWaterMarker(w){
- const isTank=String(w.type||'').indexOf('防火水槽')>=0;
- const marker=isTank
-  ? new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:110+(w.zone==='周辺'?0:10),label:{text:'★',color:color(w),fontSize:'27px',fontWeight:'900'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:18,fillColor:'#ffffff',fillOpacity:0,strokeColor:'#ffffff',strokeWeight:0}})
-  : new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:100+(w.zone==='周辺'?0:10),icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:color(w),fillOpacity:w.zone==='周辺'?.72:1,strokeColor:'#fff',strokeWeight:3}});
- marker.addListener('click',()=>showWater(w));waterMarkers[w.id]=marker;
-}
-function addWaterMarkerRefresh(w){if(waterMarkers[w.id])waterMarkers[w.id].setMap(null);addWaterMarker(w)}
+function addWaterMarker(w){const isTank=String(w.type||'').indexOf('防火水槽')>=0;const marker=isTank?new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:110+(w.zone==='周辺'?0:10),label:{text:'★',color:color(w),fontSize:'27px',fontWeight:'900'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:18,fillColor:'#fff',fillOpacity:0,strokeColor:'#fff',strokeWeight:0}}):new google.maps.Marker({map,position:{lat:Number(w.lat),lng:Number(w.lng)},title:w.type,zIndex:100+(w.zone==='周辺'?0:10),icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:color(w),fillOpacity:w.zone==='周辺'?.72:1,strokeColor:'#fff',strokeWeight:3}});marker.addListener('click',()=>showWater(w));waterMarkers[w.id]=marker;}
+function addWaterMarkerRefresh(w){const marker=waterMarkers[w.id];if(marker){marker.setPosition({lat:Number(w.lat),lng:Number(w.lng)});updateWaterMarkerVisual(marker,w);}else addWaterMarker(w);}
 function showWater(w){
  selectedWater=w;
  $('waterTitle').textContent=(String(w.type).indexOf('防火水槽')>=0?'⭐ ':'● ')+w.type;
@@ -270,7 +283,7 @@ function showWater(w){
  calculateRouteToWater(w);
 }
 function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=false)}
-async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showToast('保存中…');try{await api('saveWaterStatus',{waterId:water.id,status});showToast('✓ '+status+' に更新しました')}catch(e){alert(e.message||e);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
+async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();saveLocalSnapshot(currentMarkerObjects());showToast('保存中…');try{await api('saveWaterStatus',{waterId:water.id,status});showToast('✓ '+status+' に更新しました')}catch(e){alert(e.message||e);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
 
 function renderStats(){const c={all:waterData.length,unknown:0,ok:0,busy:0,bad:0};waterData.forEach(w=>{if(w.status==='未確認')c.unknown++;else if(w.status==='使用可能')c.ok++;else if(w.status==='消防署使用中')c.busy++;else if(w.status==='使用困難')c.bad++});const s=$('stats');s.innerHTML=`<div class="chip" onclick="openList('all')">全て <b>${c.all}</b></div><div class="chip" onclick="openList('unknown')">未確認 <b>${c.unknown}</b></div><div class="chip" style="color:#087b3d" onclick="openList('ok')">使用可 <b>${c.ok}</b></div><div class="chip" style="color:#a85d00" onclick="openList('busy')">署使用 <b>${c.busy}</b></div><div class="chip" style="color:#c52219" onclick="openList('bad')">使用困難 <b>${c.bad}</b></div>`;s.classList.remove('hidden')}
 function renderList(filter='all'){const box=$('waterList');const arr=filter==='all'?waterData:waterData.filter(w=>filter==='unknown'?w.status==='未確認':filter==='ok'?w.status==='使用可能':filter==='busy'?w.status==='消防署使用中':w.status==='使用困難');$('listCount').textContent=arr.length+'件';box.innerHTML=arr.map(w=>`<div class="list-item" onclick="showWaterById('${escapeHtml(w.id)}')"><div class="dot" style="background:${color(w)}"></div><div class="list-main"><div class="list-name">${escapeHtml(w.type)}</div><div class="list-sub">直線 ${w.distance}m</div></div><div class="list-status" style="color:${color(w)}">${escapeHtml(w.status)}</div></div>`).join('')||'<div class="distance" style="padding:12px 2px">該当する水利はありません。</div>'}
@@ -323,58 +336,16 @@ function cancelMarkerMode(){
  setPlacementMode(false);
 }
 
-function onMapClick(e){
- if(!addingMode)return;
- const lat=e.latLng.lat(),lng=e.latLng.lng();
- if(addingMode==='truck'||addingMode==='loader'){
-  const mode=addingMode,name=mode==='loader'?'積載車':'消防車';
-  addingMode=null;$('markerMode').style.display='none';
-  setPlacementMode(false);
-  const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};
-  addIncidentMarker(temp);
-  api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{
-   if(m){
-    if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}
-    addIncidentMarker(m);showToast(name+'を登録しました');
-   }else{showToast('保存できませんでした')}
-  }).catch(err=>{
-   if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}
-   alert('マーカーを保存できませんでした。\n'+(err.message||err));
-  });
-  return;
- }
- if(addingMode==='road'){
-  tempRoad.push({lat,lng});
-  if(tempLine)tempLine.setMap(null);
-  tempLine=new google.maps.Polyline({map,path:tempRoad,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:false});
- }
-}
-async function finishRoad(){
- if(tempRoad.length<2){alert('道路に沿って2点以上タップしてください。');return}
- const path=tempRoad.slice(); const c=path[Math.floor(path.length/2)];
- try{
-  const m=await api('addMarker',{type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path)});
-  cancelMarkerMode(); if(m)addIncidentMarker(m); showToast('通行止めを登録しました');
- }catch(e){alert('通行止めを保存できませんでした。\n'+(e.message||e));}
-}
+function onMapClick(e){if(!addingMode)return;const lat=e.latLng.lat(),lng=e.latLng.lng();if(addingMode==='truck'||addingMode==='loader'){const mode=addingMode,name=mode==='loader'?'積載車':'消防車';addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};addIncidentMarker(temp);api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{if(!m)return;const saved=typeof m==='string'?{...temp,markerId:m}:m;const marker=overlayMarkers[temp.markerId];if(marker){marker.setPosition({lat:Number(saved.lat),lng:Number(saved.lng)});marker.setTitle(saved.name||name);marker.setClickable(true);delete overlayMarkers[temp.markerId];overlayMarkers[saved.markerId]=marker;marker.clearListeners('click');marker.addListener('click',()=>showMarkerInfo(saved));}else addIncidentMarker(saved);saveLocalSnapshot(currentMarkerObjects());showToast(name+'を登録しました');}).catch(err=>{if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}alert('マーカーを保存できませんでした。\n'+(err.message||err))});return;}if(addingMode==='road'){tempRoad.push({lat,lng});if(tempLine)tempLine.setMap(null);tempLine=new google.maps.Polyline({map,path:tempRoad,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:false});}}
+function currentMarkerObjects(){return Object.keys(overlayMarkers).filter(id=>!String(id).startsWith('TEMP_')).map(id=>{const o=overlayMarkers[id];if(o instanceof google.maps.Polyline){const path=o.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));return{markerId:id,type:'road',name:'通行止め区間',lat:path[0]?.lat||0,lng:path[0]?.lng||0,status:JSON.stringify(path),geometry:JSON.stringify(path)};}const pos=o.getPosition(),title=o.getTitle()||'',type=title.indexOf('積載車')>=0?'loader':'truck';return{markerId:id,type,name:title,lat:pos.lat(),lng:pos.lng(),status:''};});}
+async function finishRoad(){if(tempRoad.length<2){alert('道路に沿って2点以上タップしてください。');return}const path=tempRoad.slice(),c=path[Math.floor(path.length/2)];try{const m=await api('addMarker',{type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path)});if(!m)return;const saved=typeof m==='string'?{markerId:m,type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path),geometry:JSON.stringify(path)}:m;if(tempLine){tempLine.setPath(path);tempLine.setOptions({clickable:true});tempLine.clearListeners('click');tempLine.addListener('click',()=>showMarkerInfo(saved));overlayMarkers[saved.markerId]=tempLine;tempLine=null;}else addIncidentMarker(saved);tempRoad=[];addingMode=null;setPlacementMode(false);$('drawSheet').classList.add('hidden');$('markerMode').style.display='none';saveLocalSnapshot(currentMarkerObjects());showToast('通行止めを登録しました');}catch(e){alert('通行止めを保存できませんでした。\n'+(e.message||e))}}
 function cancelDraw(){cancelMarkerMode()}
-function addIncidentMarker(m){
- if(!m||!m.markerId)return;
- if(overlayMarkers[m.markerId]){overlayMarkers[m.markerId].setMap(null);delete overlayMarkers[m.markerId]}
- if(m.type==='road'){
-  let p=[];try{p=JSON.parse(m.status||m.geometry||'[]')}catch(e){}
-  if(p.length<2)return;
-  const path=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));
-  const line=new google.maps.Polyline({map,path,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:true});
-  line.addListener('click',()=>showMarkerInfo(m));overlayMarkers[m.markerId]=line;
- }else{
-  const emoji=m.type==='loader'?'🚚':'🚒';
-  const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:m.name||emoji,label:{text:emoji,fontSize:'30px'}});
-  marker.setClickable(!addingMode); marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});overlayMarkers[m.markerId]=marker;
- }
-}
+function addIncidentMarker(m){if(!m||!m.markerId)return;const old=overlayMarkers[m.markerId];if(old){updateIncidentMarker(m);return}if(m.type==='road'){let p=[];try{p=JSON.parse(m.status||m.geometry||'[]')}catch(e){}if(p.length<2)return;const path=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));const line=new google.maps.Polyline({map,path,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:true});line.addListener('click',()=>showMarkerInfo(m));overlayMarkers[m.markerId]=line;}else{const emoji=m.type==='loader'?'🚚':'🚒';const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:m.name||emoji,label:{text:emoji,fontSize:'30px'}});marker.setClickable(!addingMode);marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});overlayMarkers[m.markerId]=marker;}}
 function showMarkerInfo(m){selectedMarker=m;$('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':'⛔ ')+(m.name||'');$('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':'通行止め区間';$('markerSheet').classList.remove('hidden')}
-async function removeSelectedMarker(){if(!selectedMarker)return;if(!confirm('このマーカーを削除しますか？'))return;try{await api('deleteMarker',{markerId:selectedMarker.markerId});selectedMarker=null;closeSheet('markerSheet');await loadAll(true);showToast('削除しました')}catch(e){alert(e.message||e)}}
+async function removeSelectedMarker(){
+ if(!selectedMarker)return;if(!confirm('このマーカーを削除しますか？'))return;const id=selectedMarker.markerId;
+ try{await api('deleteMarker',{markerId:id});if(overlayMarkers[id]){overlayMarkers[id].setMap(null);delete overlayMarkers[id]}selectedMarker=null;closeSheet('markerSheet');saveLocalSnapshot(currentMarkerObjects());showToast('削除しました')}catch(e){alert(e.message||e)}
+}
 
 async function calculateRouteToWater(w){
  clearRoute();
@@ -402,16 +373,7 @@ function renderRouteInfo(meters,fallback,warnings=[]){const hose=Number($('hoseL
 function recalcHose(){const meters=Number($('routeInfo').dataset.routeMeters||0);if(meters)renderRouteInfo(meters,false)}
 
 function confirmEndIncident(){closeSheet('manageSheet');setTimeout(endIncident,50)}
-async function endIncident(){if(!confirm('今回の現場を終了します。現場の履歴は残ります。\n本当に終了しますか？'))return;stopSharedPolling();try{await api('endIncident');incident=null;selectedWater=null;selectedMarker=null;clearRoute();if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);fireMarker=null;fireCircle=null;clearOverlays();hideIncidentBadge();$('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';$('stats').classList.add('hidden');$('address').value='';showHome();showToast('現場を終了しました')}catch(e){alert(e.message||e)}}
-
-function forceRefresh(){
- const btn=$('forceRefreshBtn');
- if(btn){btn.disabled=true;btn.textContent='↻';}
- const url=new URL(window.location.href);
- url.searchParams.set('v','23_'+Date.now().toString());
- url.searchParams.set('refresh','1');
- window.location.replace(url.toString());
-}
+async function endIncident(){if(!confirm('今回の現場を終了します。現場の履歴は残ります。\n本当に終了しますか？'))return;stopSharedPolling();try{await api('endIncident');incident=null;selectedWater=null;selectedMarker=null;clearRoute();if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);fireMarker=null;fireCircle=null;clearOverlays();hideIncidentBadge();$('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';$('stats').classList.add('hidden');$('address').value='';clearLocalSnapshot();showHome();showToast('現場を終了しました')}catch(e){alert(e.message||e)}}
 
 // iPhone Safariの古いHTML/JSを再利用しにくくする
 try{
