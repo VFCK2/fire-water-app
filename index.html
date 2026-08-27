@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v26</title>
+<title>消防団 現場支援マップ v27</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -162,7 +162,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v26 */
+/* Google Maps version v27 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -326,36 +326,125 @@ function cancelMarkerMode(){
 function onMapClick(e){
  if(!addingMode)return;
  const lat=e.latLng.lat(),lng=e.latLng.lng();
+
+ // 消防車・積載車
+ // 仮マーカーを先に表示し、保存完了後も「同じマーカー」をそのまま使う。
+ // これで保存時の「一瞬消える→再表示」を防ぐ。
  if(addingMode==='truck'||addingMode==='loader'){
   const mode=addingMode,name=mode==='loader'?'積載車':'消防車';
-  addingMode=null;$('markerMode').style.display='none';
+  addingMode=null;
+  $('markerMode').style.display='none';
   setPlacementMode(false);
-  const temp={markerId:'TEMP_'+Date.now(),type:mode,name,lat,lng,status:''};
+
+  const tempId='TEMP_'+Date.now();
+  const temp={markerId:tempId,type:mode,name,lat,lng,status:''};
   addIncidentMarker(temp);
+
   api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{
    if(m){
-    if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}
-    addIncidentMarker(m);showToast(name+'を登録しました');
-   }else{showToast('保存できませんでした')}
+    const marker=overlayMarkers[tempId];
+
+    if(marker){
+     // 既存の表示中マーカーをサーバー保存後のIDへ引き継ぐ。
+     // setMap(null) をしないので画面上で消えない。
+     try{google.maps.event.clearListeners(marker,'click')}catch(e){}
+     marker.setTitle(m.name||name);
+     marker.setClickable(true);
+     marker.addListener('click',()=>showMarkerInfo(m));
+
+     delete overlayMarkers[tempId];
+     overlayMarkers[m.markerId]=marker;
+    }else{
+     addIncidentMarker(m);
+    }
+
+    showToast(name+'を登録しました');
+   }else{
+    showToast('保存できませんでした');
+   }
   }).catch(err=>{
-   if(overlayMarkers[temp.markerId]){overlayMarkers[temp.markerId].setMap(null);delete overlayMarkers[temp.markerId]}
+   // 保存失敗時は仮マーカーを残さず、エラーを知らせる。
+   if(overlayMarkers[tempId]){
+    overlayMarkers[tempId].setMap(null);
+    delete overlayMarkers[tempId];
+   }
    alert('マーカーを保存できませんでした。\n'+(err.message||err));
   });
   return;
  }
+
+ // 通行止め
  if(addingMode==='road'){
   tempRoad.push({lat,lng});
   if(tempLine)tempLine.setMap(null);
-  tempLine=new google.maps.Polyline({map,path:tempRoad,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:false});
+  tempLine=new google.maps.Polyline({
+   map,
+   path:tempRoad,
+   strokeColor:'#ff3b30',
+   strokeWeight:10,
+   strokeOpacity:.95,
+   clickable:false,
+   zIndex:900
+  });
  }
 }
 async function finishRoad(){
  if(tempRoad.length<2){alert('道路に沿って2点以上タップしてください。');return}
- const path=tempRoad.slice(); const c=path[Math.floor(path.length/2)];
+
+ // 登録中も描画した赤線を地図から消さない。
+ // 保存完了後は「同じ線」を正式マーカーとして引き継ぐ。
+ const path=tempRoad.slice();
+ const c=path[Math.floor(path.length/2)];
+ const oldLine=tempLine;
+
+ addingMode=null;
+ $('markerMode').style.display='none';
+ $('drawSheet').classList.add('hidden');
+ setPlacementMode(false);
+
  try{
-  const m=await api('addMarker',{type:'road',name:'通行止め区間',lat:c.lat,lng:c.lng,status:JSON.stringify(path)});
-  cancelMarkerMode(); if(m)addIncidentMarker(m); showToast('通行止めを登録しました');
- }catch(e){alert('通行止めを保存できませんでした。\n'+(e.message||e));}
+  const m=await api('addMarker',{
+   type:'road',
+   name:'通行止め区間',
+   lat:c.lat,
+   lng:c.lng,
+   status:JSON.stringify(path)
+  });
+
+  if(m && oldLine){
+   // 仮線を消さず、そのまま正式な通行止めマーカーへ昇格。
+   let savedPath=path;
+   try{
+    const p=JSON.parse(m.status||m.geometry||'[]');
+    if(p.length>=2){
+     savedPath=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));
+    }
+   }catch(e){}
+
+   oldLine.setPath(savedPath);
+   oldLine.setOptions({clickable:true,zIndex:900});
+
+   try{google.maps.event.clearListeners(oldLine,'click')}catch(e){}
+   oldLine.addListener('click',()=>showMarkerInfo(m));
+
+   delete overlayMarkers['TEMP_ROAD'];
+   overlayMarkers[m.markerId]=oldLine;
+   tempLine=null;
+   tempRoad=[];
+   showToast('通行止めを登録しました');
+  }else if(m){
+   addIncidentMarker(m);
+   tempLine=null;
+   tempRoad=[];
+   showToast('通行止めを登録しました');
+  }else{
+   // 保存失敗時は仮線を残して、場所を確認できるようにする。
+   showToast('通行止めを保存できませんでした');
+  }
+ }catch(e){
+  // エラー時も仮線を消さない。
+  alert('通行止めを保存できませんでした。\n'+(e.message||e));
+ }
 }
 function cancelDraw(){cancelMarkerMode()}
 function addIncidentMarker(m){
@@ -365,8 +454,21 @@ function addIncidentMarker(m){
   let p=[];try{p=JSON.parse(m.status||m.geometry||'[]')}catch(e){}
   if(p.length<2)return;
   const path=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));
-  const line=new google.maps.Polyline({map,path,strokeColor:'#ff3b30',strokeWeight:10,strokeOpacity:.95,clickable:true});
-  line.addListener('click',()=>showMarkerInfo(m));overlayMarkers[m.markerId]=line;
+  // 通行止め線は「選択モード中」はクリックで邪魔をしない。
+  // 通常時だけ選択できるようにする。
+  const line=new google.maps.Polyline({
+   map,
+   path,
+   strokeColor:'#ff3b30',
+   strokeWeight:12,
+   strokeOpacity:.95,
+   clickable:!addingMode,
+   zIndex:900
+  });
+  line.addListener('click',()=>{
+   if(!addingMode)showMarkerInfo(m);
+  });
+  overlayMarkers[m.markerId]=line;
  }else{
   const emoji=m.type==='loader'?'🚚':'🚒';
   const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:m.name||emoji,label:{text:emoji,fontSize:'30px'}});
