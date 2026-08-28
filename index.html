@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v41</title>
+<title>消防団 現場支援マップ v42</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v41: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v42: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -320,7 +320,7 @@ function api(action, params={}){
 
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
 let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
-let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false;
+let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false;
 const defaultCenter={lat:35.5572,lng:139.7330};
 const $=id=>document.getElementById(id);
 function showIncidentBadge(){}
@@ -429,8 +429,33 @@ $('address').addEventListener('keydown',e=>{if(e.key==='Enter')searchFire()});
 
 async function loadWaterInfo(){return null}
 async function refreshSharedState(){if(!incident){await loadWaterInfo();return}await loadAll(false);showToast('最新状態を取得しました')}
-function startSharedPolling(){stopSharedPolling();syncTimer=setInterval(()=>{if(document.hidden||!incident||syncBusy)return;loadAll(true)},10000)}
+function startSharedPolling(){
+  stopSharedPolling();
+  syncTimer=setInterval(()=>{
+    if(document.hidden||!incident)return;
+    syncMarkersOnly();
+  },5000);
+}
 function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}}
+function syncMarkersOnly(){
+  if(!incident||markerSyncBusy)return;
+  markerSyncBusy=true;
+  api('getActiveMarkers').then(markers=>{
+    const list=Array.isArray(markers)?markers:[];
+    const ids=new Set(list.map(m=>String(m.markerId)));
+    Object.keys(overlayMarkers).forEach(id=>{
+      if(!ids.has(String(id))){
+        try{overlayMarkers[id].setMap(null)}catch(e){}
+        delete overlayMarkers[id];
+      }
+    });
+    list.forEach(m=>{
+      const id=String(m.markerId);
+      if(!overlayMarkers[id])addIncidentMarker(m);
+    });
+  }).catch(e=>console.warn('marker sync',e)).finally(()=>{markerSyncBusy=false});
+}
+
 
 async function searchFire(){
  const a=$('address').value.trim();if(!a){focusAddress();return}
