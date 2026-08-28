@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v50</title>
+<title>消防団 現場支援マップ v51</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -202,10 +202,20 @@ body.marker-placement #map{cursor:crosshair}
   padding:7px 13px;font-size:12px;font-weight:700;pointer-events:none;
 }
 
+
+/* v51: 過去現場の表示・削除中を明確に表示 */
+#historyLoading{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.38);backdrop-filter:blur(3px)}
+#historyLoading.show{display:flex}
+.history-loading-card{min-width:250px;max-width:82vw;background:rgba(255,255,255,.98);border-radius:18px;padding:18px 20px;text-align:center;box-shadow:0 14px 45px rgba(0,0,0,.3)}
+.history-spinner{width:30px;height:30px;margin:0 auto 10px;border:4px solid #e2e5e9;border-top-color:#1677ff;border-radius:50%;animation:historySpin .8s linear infinite}
+.history-loading-title{font-size:16px;font-weight:900}.history-loading-sub{font-size:11px;color:#6b7077;margin-top:4px}
+@keyframes historySpin{to{transform:rotate(360deg)}}
+.history-action-busy{opacity:.6!important;pointer-events:none}
 </style>
 </head>
 <body>
 <div id="app">
+<div id="historyLoading" aria-live="polite"><div class="history-loading-card"><div class="history-spinner"></div><div id="historyLoadingTitle" class="history-loading-title">処理中…</div><div id="historyLoadingSub" class="history-loading-sub">しばらくお待ちください</div></div></div>
 <div id="map"></div>
 <div class="marker-placement-mask" aria-hidden="true"></div>
 
@@ -318,19 +328,24 @@ body.marker-placement #map{cursor:crosshair}
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
-function api(action, params={}){
+function api(action, params={}, timeoutMs=15000){
  return new Promise((resolve,reject)=>{
   const cb='jsonp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
   const script=document.createElement('script');
   const q=new URLSearchParams({...params,action,callback:cb,_:Date.now()});
   let done=false;
   const cleanup=()=>{if(done)return;done=true;try{delete window[cb]}catch(e){}script.remove()};
-  const timer=setTimeout(()=>{cleanup();reject(new Error('サーバー応答がタイムアウトしました。'))},15000);
+  const timer=setTimeout(()=>{cleanup();reject(new Error('サーバー応答がタイムアウトしました。'))},timeoutMs);
   window[cb]=(payload)=>{clearTimeout(timer);cleanup();if(payload&&payload.ok===false)reject(new Error(payload.error||'APIエラー'));else resolve(payload?payload.data:null)};
   script.onerror=()=>{clearTimeout(timer);cleanup();reject(new Error('APIに接続できませんでした。'))};
   script.src=API_URL+'?'+q.toString();
   document.head.appendChild(script);
  });
+}
+function setHistoryLoading(show,title='処理中…',sub='しばらくお待ちください'){
+ const el=$('historyLoading');if(!el)return;
+ $('historyLoadingTitle').textContent=title;$('historyLoadingSub').textContent=sub;
+ el.classList.toggle('show',!!show);
 }
 
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
@@ -376,12 +391,15 @@ async function openHistory(){
   $('historySheet').classList.remove('hidden');
   $('historyList').innerHTML='<div class="history-empty">履歴を読み込み中…</div>';
   $('historyCount').textContent='';
+  setHistoryLoading(true,'過去現場を読み込み中…','履歴を取得しています');
   try{
-    const rows=await api('getIncidentHistory');
+    const rows=await api('getIncidentHistory',{},30000);
     renderHistory(rows||[]);
   }catch(e){
     $('historyList').innerHTML='<div class="history-empty">履歴を読み込めませんでした。</div>';
-    alert(e.message||e);
+    alert('過去現場の読み込みに失敗しました。\n'+(e.message||e));
+  }finally{
+    setHistoryLoading(false);
   }
 }
 
@@ -410,20 +428,25 @@ function renderHistory(rows){
 
 async function deleteHistory(incidentId){
   if(!incidentId)return;
-  if(!confirm('この現場履歴を削除します。\\n水利の状態・消防車/積載車・通行止めも一緒に削除されます。\\n本当に削除しますか？'))return;
+  if(!confirm('この現場履歴を削除します。\n水利の状態・消防車/積載車・通行止めも一緒に削除されます。\n本当に削除しますか？'))return;
+  setHistoryLoading(true,'過去現場を削除中…','サーバーから履歴と関連データを削除しています');
   try{
-    await api('deleteIncident',{incidentId});
-    showToast('履歴を削除しました');
+    await api('deleteIncident',{incidentId},30000);
+    showToast('✓ 履歴を削除しました');
     await openHistory();
   }catch(e){
-    alert('履歴を削除できませんでした。\\n'+(e.message||e));
+    alert('履歴を削除できませんでした。\n'+(e.message||e));
+  }finally{
+    setHistoryLoading(false);
   }
 }
 
 
 async function openHistoryIncident(incidentId){
+  if(!incidentId)return;
+  setHistoryLoading(true,'過去現場を表示中…','水利・車両・通行止めを復元しています');
   try{
-    const d=await api('getIncidentHistoryDetail',{incidentId});
+    const d=await api('getIncidentHistoryDetail',{incidentId},45000);
     if(!d||!d.incident)throw new Error('過去現場を読み込めませんでした。');
 
     historyViewMode=true;
@@ -437,7 +460,7 @@ async function openHistoryIncident(incidentId){
     renderIncident(incident);
     renderJurisdiction();
 
-    waterData=d.water||[];
+    waterData=Array.isArray(d.water)?d.water:[];
     waterData.forEach(addWaterMarker);
     renderStats();renderList();
     (d.markers||[]).forEach(addIncidentMarker);
@@ -450,19 +473,35 @@ async function openHistoryIncident(incidentId){
       badge=document.createElement('div');
       badge.id='historyReadonlyBadge';
       badge.className='history-readonly';
-      badge.textContent='📋 過去現場（閲覧のみ）';
       document.getElementById('map').appendChild(badge);
     }
+    badge.textContent='📋 過去現場（閲覧のみ）';
     badge.classList.remove('hidden');
 
-    showToast('過去現場を読み込みました');
+    // 過去現場から履歴一覧へ戻れるボタンを用意
+    let back=$('historyBackBtn');
+    if(!back){
+      back=document.createElement('button');
+      back.id='historyBackBtn';
+      back.className='btn btn-light';
+      back.textContent='📋 履歴一覧へ戻る';
+      back.style.position='fixed';back.style.left='50%';back.style.bottom='calc(env(safe-area-inset-bottom) + 105px)';back.style.transform='translateX(-50%)';back.style.zIndex='2100';back.style.boxShadow='0 6px 20px rgba(0,0,0,.2)';
+      back.onclick=()=>{exitHistoryView();openHistory()};
+      document.body.appendChild(back);
+    }
+    back.classList.remove('hidden');
+    showToast('過去現場を表示しました');
   }catch(e){
     alert('過去現場を読み込めませんでした。\n'+(e.message||e));
+  }finally{
+    setHistoryLoading(false);
   }
 }
+
 function exitHistoryView(){
   historyViewMode=false;
   const b=$('historyReadonlyBadge');if(b)b.classList.add('hidden');
+  const back=$('historyBackBtn');if(back)back.classList.add('hidden');
   clearRoute();clearOverlays();
   selectedWater=null;selectedMarker=null;incident=null;
   $('stats').classList.add('hidden');
