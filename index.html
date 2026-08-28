@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v33</title>
+<title>消防団 現場支援マップ v34</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -87,6 +87,41 @@ body.marker-placement #map{cursor:crosshair}
 @media(max-width:699px){
  .stats{left:7px;right:7px;bottom:calc(env(safe-area-inset-bottom) + 70px);grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
  .stats .chip{padding:7px 4px;font-size:12px}.stats .chip b{font-size:14px}
+}
+
+
+/* v34: 水利件数チップを文字幅に合わせる */
+.stats{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-start;
+  align-items:center;
+  gap:5px;
+  width:max-content;
+  max-width:calc(100vw - 14px);
+  padding:2px;
+}
+.stats .chip{
+  width:auto;
+  min-width:0;
+  flex:0 0 auto;
+  white-space:nowrap;
+  text-align:center;
+  padding:7px 9px;
+}
+@media(max-width:699px){
+  .stats{
+    left:7px;
+    right:auto;
+    bottom:calc(env(safe-area-inset-bottom) + 70px);
+    max-width:calc(100vw - 14px);
+    gap:5px;
+  }
+  .stats .chip{
+    padding:6px 8px;
+    font-size:12px;
+  }
+  .stats .chip b{font-size:14px}
 }
 
 </style>
@@ -201,7 +236,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v33 */
+/* Google Maps version v34 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
