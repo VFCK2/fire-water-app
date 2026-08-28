@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v35</title>
+<title>消防団 現場支援マップ v31</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,93 +79,19 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v33: 水利件数を2段表示 */
-.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;overflow:visible;padding:2px}
-.stats .chip{min-width:0;width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis}
-.stats .chip:nth-child(4){grid-column:1}
-.stats .chip:nth-child(5){grid-column:2}
-@media(max-width:699px){
- .stats{left:7px;right:7px;bottom:calc(env(safe-area-inset-bottom) + 70px);grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
- .stats .chip{padding:7px 4px;font-size:12px}.stats .chip b{font-size:14px}
+/* v36: 水利ウィンドウの状態ボタンを4つ横一列 */
+#waterSheet .actiongrid{
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:6px !important;
 }
-
-
-/* v34: 水利件数チップを文字幅に合わせる */
-.stats{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:flex-start;
-  align-items:center;
-  gap:5px;
-  width:max-content;
-  max-width:calc(100vw - 14px);
-  padding:2px;
-}
-.stats .chip{
-  width:auto;
-  min-width:0;
-  flex:0 0 auto;
-  white-space:nowrap;
-  text-align:center;
-  padding:7px 9px;
-}
-@media(max-width:699px){
-  .stats{
-    left:7px;
-    right:auto;
-    bottom:calc(env(safe-area-inset-bottom) + 70px);
-    max-width:calc(100vw - 14px);
-    gap:5px;
-  }
-  .stats .chip{
-    padding:6px 8px;
-    font-size:12px;
-  }
-  .stats .chip b{font-size:14px}
-}
-
-
-/* v35: 水利数チップをさらにコンパクト化。左右の地図を確保 */
-.stats{
-  display:flex !important;
-  flex-wrap:wrap !important;
-  justify-content:center !important;
-  align-items:center !important;
-  gap:4px !important;
-  width:auto !important;
-  max-width:max-content !important;
-  margin:0 auto !important;
-  padding:2px !important;
-}
-.stats .chip{
-  flex:0 0 auto !important;
-  width:auto !important;
-  min-width:auto !important;
-  max-width:max-content !important;
-  padding:4px 6px !important;
-  margin:0 !important;
+#waterSheet .actiongrid .btn{
+  min-width:0 !important;
+  width:100% !important;
+  padding-left:3px !important;
+  padding-right:3px !important;
   white-space:nowrap !important;
-  font-size:11px !important;
-  line-height:1.15 !important;
-}
-.stats .chip b{
-  font-size:13px !important;
-}
-@media(max-width:699px){
-  .stats{
-    left:50% !important;
-    right:auto !important;
-    transform:translateX(-50%) !important;
-    max-width:calc(100vw - 90px) !important;
-    gap:4px !important;
-  }
-  .stats .chip{
-    padding:4px 6px !important;
-    font-size:11px !important;
-  }
-  .stats .chip b{
-    font-size:13px !important;
-  }
+  font-size:12px !important;
 }
 
 </style>
@@ -205,7 +131,7 @@ body.marker-placement #map{cursor:crosshair}
  </div>
  <div id="waterStatus" class="statusline"></div>
  <div id="routeInfo" class="route-card">📏 ホース敷設距離を計算中…</div>
- <div class="hose-row"><span>ホース長</span><select id="hoseLength" onchange="recalcHose()"><option value="20">20m</option><option value="10">10m</option><option value="30">30m</option></select></div>
+ 
  <div class="actiongrid">
   <button id="waterUnknownBtn" class="btn btn-yellow" onclick="setWater('未確認')">未確認</button>
   <button id="waterOkBtn" class="btn btn-green" onclick="setWater('使用可能')">使用可</button>
@@ -280,7 +206,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v35 */
+/* Google Maps version v31 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -433,59 +359,7 @@ function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forE
  fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
  const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
 }
-async function loadAll(silent=false){
-  if(!incident||syncBusy)return;
-  syncBusy=true;
-  try{
-    const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});
-    if(!snap)return;
-    if(snap.incident)incident=snap.incident;
-
-    const nextWater=Array.isArray(snap.water)?snap.water:[];
-    const nextWaterIds=new Set(nextWater.map(w=>String(w.id)));
-
-    Object.keys(waterMarkers).forEach(id=>{
-      if(!nextWaterIds.has(String(id))){
-        try{waterMarkers[id].setMap(null)}catch(e){}
-        delete waterMarkers[id];
-      }
-    });
-
-    nextWater.forEach(w=>{
-      const id=String(w.id), old=waterData.find(x=>String(x.id)===id), marker=waterMarkers[id];
-      if(!marker){
-        addWaterMarker(w);
-      }else if(!old || old.status!==w.status || old.lat!==w.lat || old.lng!==w.lng){
-        try{
-          marker.setPosition({lat:Number(w.lat),lng:Number(w.lng)});
-          const isTank=String(w.type||'').indexOf('防火水槽')>=0;
-          if(isTank){
-            marker.setLabel({text:'★',color:color(w),fontSize:'27px',fontWeight:'900'});
-          }else{
-            marker.setIcon({path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:color(w),fillOpacity:w.zone==='周辺'?.72:1,strokeColor:'#fff',strokeWeight:3});
-          }
-        }catch(e){}
-      }
-    });
-    waterData=nextWater;
-    renderStats();renderList();
-
-    const nextMarkers=Array.isArray(snap.markers)?snap.markers:[];
-    const nextMarkerIds=new Set(nextMarkers.map(m=>String(m.markerId)));
-    Object.keys(overlayMarkers).forEach(id=>{
-      if(!nextMarkerIds.has(String(id))){
-        try{overlayMarkers[id].setMap(null)}catch(e){}
-        delete overlayMarkers[id];
-      }
-    });
-    nextMarkers.forEach(m=>{
-      if(!overlayMarkers[String(m.markerId)])addIncidentMarker(m);
-    });
-  }catch(e){
-    console.error(e);
-    if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e));
-  }finally{syncBusy=false}
-}
+async function loadAll(silent=false){if(!incident||syncBusy)return;syncBusy=true;try{const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});if(!snap)return;if(snap.incident)incident=snap.incident;clearOverlays();waterData=snap.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(snap.markers||[]).forEach(addIncidentMarker)}catch(e){console.error(e);if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e))}finally{syncBusy=false}}
 
 function renderJurisdiction(){jurisdictionLayers.forEach(x=>x.setMap(null));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const south=Number(a.south),west=Number(a.west),north=Number(a.north),east=Number(a.east);if(![south,west,north,east].every(isFinite))return;const core=new google.maps.Rectangle({map,bounds:{south,west,north,east},strokeColor:'#16834b',strokeWeight:2,fillColor:'#16834b',fillOpacity:.035,clickable:false});const m=Number(a.bufferM||200);const latDeg=m/111320,lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));const near=new google.maps.Rectangle({map,bounds:{south:south-latDeg,west:west-lngDeg,north:north+latDeg,east:east+lngDeg},strokeColor:'#d39b00',strokeWeight:1,strokeOpacity:1,fillOpacity:0,clickable:false});jurisdictionLayers.push(core,near)})}
 function clearOverlays(){Object.values(waterMarkers).forEach(m=>m.setMap(null));Object.values(overlayMarkers).forEach(m=>m.setMap(null));waterMarkers={};overlayMarkers={}}
