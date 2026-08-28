@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v48</title>
+<title>消防団 現場支援マップ v49</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v48: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v49: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -335,7 +335,7 @@ function api(action, params={}){
 
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
 let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
-let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false;
+let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false;
 let historyViewMode=false;
 let nearbyWaterClientCache=new Map();
 const defaultCenter={lat:35.5572,lng:139.7330};
@@ -539,6 +539,52 @@ async function searchFire(){
   startSharedPolling();showToast('現場を開始しました');
  }catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='検索'}
 }
+
+function clearOverlays(){
+  Object.values(waterMarkers).forEach(m=>{
+    try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+  });
+  Object.values(overlayMarkers).forEach(m=>{
+    try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+  });
+  waterMarkers={};
+  overlayMarkers={};
+}
+
+function color(w){
+  return w.status==='使用可能'?'#18a957':
+         w.status==='消防署使用中'?'#f59e0b':
+         w.status==='使用困難'?'#ff3b30':'#d99a00';
+}
+
+function addWaterMarker(w){
+  if(!w||w.id===undefined||w.lat===undefined||w.lng===undefined)return;
+  const old=waterMarkers[w.id];
+  if(old){
+    try{old.setMap(null)}catch(e){}
+    delete waterMarkers[w.id];
+  }
+  const marker=new google.maps.Marker({
+    map,
+    position:{lat:Number(w.lat),lng:Number(w.lng)},
+    title:w.type||'水利',
+    zIndex:100+(w.zone==='周辺'?0:10),
+    icon:{
+      path:google.maps.SymbolPath.CIRCLE,
+      scale:10,
+      fillColor:color(w),
+      fillOpacity:w.zone==='周辺'?.72:1,
+      strokeColor:'#fff',
+      strokeWeight:3
+    }
+  });
+  marker.setClickable(!addingMode);
+  marker.addListener('click',()=>{
+    if(!addingMode)showWater(w);
+  });
+  waterMarkers[w.id]=marker;
+}
+
 function renderJurisdiction(){jurisdictionLayers.forEach(x=>x.setMap(null));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const south=Number(a.south),west=Number(a.west),north=Number(a.north),east=Number(a.east);if(![south,west,north,east].every(isFinite))return;const core=new google.maps.Rectangle({map,bounds:{south,west,north,east},strokeColor:'#16834b',strokeWeight:2,fillColor:'#16834b',fillOpacity:.035,clickable:false});const m=Number(a.bufferM||200);const latDeg=m/111320,lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));const near=new google.maps.Rectangle({map,bounds:{south:south-latDeg,west:west-lngDeg,north:north+latDeg,east:east+lngDeg},strokeColor:'#d39b00',strokeWeight:1,strokeOpacity:1,fillOpacity:0,clickable:false});jurisdictionLayers.push(core,near)})}
 function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forEach(x=>x.classList.add('hidden'));$('headerSub').textContent=i.address;$('resultArea').classList.remove('hidden');$('searchArea').classList.add('hidden');showIncidentBadge();
  if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);
@@ -546,38 +592,94 @@ function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forE
  fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
  const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
 }
+async function refreshWaterInBackground(silent=true){
+  if(!incident||waterSyncBusy)return;
+  waterSyncBusy=true;
+
+  const lat=Number(incident.lat), lng=Number(incident.lng);
+  const radius=Number(incident.radiusM||200);
+
+  try{
+    const latest=await api('getNearbyWater',{lat,lng,radiusM:radius});
+    if(Array.isArray(latest)){
+      waterData=latest;
+
+      // 水利だけを差し替える。消防車・積載車・通行止めは触らない。
+      Object.values(waterMarkers).forEach(m=>{
+        try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+      });
+      waterMarkers={};
+
+      waterData.forEach(addWaterMarker);
+      renderStats();
+      renderList();
+
+      if(!silent)showToast('✓ 最新の水利状態を更新しました');
+    }
+  }catch(e){
+    console.warn('water refresh',e);
+    // 水利更新だけの失敗では、既に表示している水利を消さない。
+    // 手動更新でもエラーダイアログを出さず、次回更新へ回す。
+  }finally{
+    waterSyncBusy=false;
+  }
+}
+
 async function loadAll(silent=false){
   if(!incident||syncBusy)return;
   syncBusy=true;
-  try{
-    const key=Number(incident.lat).toFixed(5)+','+Number(incident.lng).toFixed(5)+','+Number(incident.radiusM||200);
-    const cached=nearbyWaterClientCache.get(key);
-    const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});
-    if(!snap)return;
-    if(snap.incident)incident=snap.incident;
-    clearOverlays();
 
-    // サーバーから返った水利を通常利用。直近キャッシュがあり同じ場所なら、
-    // 表示を先に行って体感速度を上げ、最新レスポンスで置き換える。
+  try{
+    const key=Number(incident.lat).toFixed(5)+','+
+              Number(incident.lng).toFixed(5)+','+
+              Number(incident.radiusM||200);
+
+    // まず現在端末のキャッシュを表示。ここでは通信を待たない。
+    const cached=nearbyWaterClientCache.get(key);
     if(cached&&cached.length){
       waterData=cached;
+      Object.values(waterMarkers).forEach(m=>{
+        try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+      });
+      waterMarkers={};
       waterData.forEach(addWaterMarker);
-      renderStats();renderList();
+      renderStats();
+      renderList();
     }
-    waterData=snap.water||[];
-    nearbyWaterClientCache.set(key,waterData);
-    if(nearbyWaterClientCache.size>8){
-      const first=nearbyWaterClientCache.keys().next().value;
-      nearbyWaterClientCache.delete(first);
-    }
-    waterData.forEach(addWaterMarker);
-    renderStats();renderList();
-    (snap.markers||[]).forEach(addIncidentMarker);
+
+    // マーカーは軽量APIで即時同期。
+    await new Promise((resolve)=>{
+      api('getActiveMarkers').then(markers=>{
+        const list=Array.isArray(markers)?markers:[];
+        const ids=new Set(list.map(m=>String(m.markerId)));
+
+        Object.keys(overlayMarkers).forEach(id=>{
+          if(id==='TEMP_ROAD')return;
+          if(!ids.has(String(id))){
+            try{overlayMarkers[id].setMap(null)}catch(e){}
+            delete overlayMarkers[id];
+          }
+        });
+
+        list.forEach(m=>{
+          const id=String(m.markerId);
+          if(!overlayMarkers[id])addIncidentMarker(m);
+        });
+      }).catch(e=>console.warn('marker refresh',e))
+        .finally(resolve);
+    });
+
+    // 水利はバックグラウンド。ここを待たないので「最新情報」で1分以上固まらない。
+    refreshWaterInBackground(silent);
+
   }catch(e){
     console.error(e);
     if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e));
-  }finally{syncBusy=false}
+  }finally{
+    syncBusy=false;
+  }
 }
+
 function addWaterMarkerRefresh(w){if(waterMarkers[w.id])waterMarkers[w.id].setMap(null);addWaterMarker(w)}
 function showWater(w){
  selectedWater=w;
