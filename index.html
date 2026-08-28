@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v32</title>
+<title>消防団 現場支援マップ v33</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,35 +79,14 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v32 水利件数表示：3項目＋2項目の2段表示 */
-.stats{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:5px;
-  overflow:visible;
-  padding:2px;
-  right:70px;
-}
-.stats .chip{
-  min-width:0;
-  width:100%;
-  text-align:center;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
+/* v33: 水利件数を2段表示 */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;overflow:visible;padding:2px}
+.stats .chip{min-width:0;width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis}
+.stats .chip:nth-child(4){grid-column:1}
+.stats .chip:nth-child(5){grid-column:2}
 @media(max-width:699px){
-  .stats{
-    left:7px;
-    right:66px;
-    bottom:calc(env(safe-area-inset-bottom) + 70px);
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:5px;
-  }
-  .stats .chip{
-    padding:7px 4px;
-    font-size:12px;
-  }
-  .stats .chip b{font-size:14px}
+ .stats{left:7px;right:7px;bottom:calc(env(safe-area-inset-bottom) + 70px);grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .stats .chip{padding:7px 4px;font-size:12px}.stats .chip b{font-size:14px}
 }
 
 </style>
@@ -222,9 +201,9 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v32 */
+/* Google Maps version v33 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
-const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
+const GOOGLE_MAPS_BROWSER_KEY='YOUR_GOOGLE_MAPS_BROWSER_KEY';
 
 function api(action, params={}){
  return new Promise((resolve,reject)=>{
@@ -375,7 +354,59 @@ function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forE
  fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
  const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
 }
-async function loadAll(silent=false){if(!incident||syncBusy)return;syncBusy=true;try{const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});if(!snap)return;if(snap.incident)incident=snap.incident;clearOverlays();waterData=snap.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(snap.markers||[]).forEach(addIncidentMarker)}catch(e){console.error(e);if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e))}finally{syncBusy=false}}
+async function loadAll(silent=false){
+  if(!incident||syncBusy)return;
+  syncBusy=true;
+  try{
+    const snap=await api('getIncidentSnapshot',{lat:incident.lat,lng:incident.lng,radiusM:incident.radiusM});
+    if(!snap)return;
+    if(snap.incident)incident=snap.incident;
+
+    const nextWater=Array.isArray(snap.water)?snap.water:[];
+    const nextWaterIds=new Set(nextWater.map(w=>String(w.id)));
+
+    Object.keys(waterMarkers).forEach(id=>{
+      if(!nextWaterIds.has(String(id))){
+        try{waterMarkers[id].setMap(null)}catch(e){}
+        delete waterMarkers[id];
+      }
+    });
+
+    nextWater.forEach(w=>{
+      const id=String(w.id), old=waterData.find(x=>String(x.id)===id), marker=waterMarkers[id];
+      if(!marker){
+        addWaterMarker(w);
+      }else if(!old || old.status!==w.status || old.lat!==w.lat || old.lng!==w.lng){
+        try{
+          marker.setPosition({lat:Number(w.lat),lng:Number(w.lng)});
+          const isTank=String(w.type||'').indexOf('防火水槽')>=0;
+          if(isTank){
+            marker.setLabel({text:'★',color:color(w),fontSize:'27px',fontWeight:'900'});
+          }else{
+            marker.setIcon({path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:color(w),fillOpacity:w.zone==='周辺'?.72:1,strokeColor:'#fff',strokeWeight:3});
+          }
+        }catch(e){}
+      }
+    });
+    waterData=nextWater;
+    renderStats();renderList();
+
+    const nextMarkers=Array.isArray(snap.markers)?snap.markers:[];
+    const nextMarkerIds=new Set(nextMarkers.map(m=>String(m.markerId)));
+    Object.keys(overlayMarkers).forEach(id=>{
+      if(!nextMarkerIds.has(String(id))){
+        try{overlayMarkers[id].setMap(null)}catch(e){}
+        delete overlayMarkers[id];
+      }
+    });
+    nextMarkers.forEach(m=>{
+      if(!overlayMarkers[String(m.markerId)])addIncidentMarker(m);
+    });
+  }catch(e){
+    console.error(e);
+    if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e));
+  }finally{syncBusy=false}
+}
 
 function renderJurisdiction(){jurisdictionLayers.forEach(x=>x.setMap(null));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const south=Number(a.south),west=Number(a.west),north=Number(a.north),east=Number(a.east);if(![south,west,north,east].every(isFinite))return;const core=new google.maps.Rectangle({map,bounds:{south,west,north,east},strokeColor:'#16834b',strokeWeight:2,fillColor:'#16834b',fillOpacity:.035,clickable:false});const m=Number(a.bufferM||200);const latDeg=m/111320,lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));const near=new google.maps.Rectangle({map,bounds:{south:south-latDeg,west:west-lngDeg,north:north+latDeg,east:east+lngDeg},strokeColor:'#d39b00',strokeWeight:1,strokeOpacity:1,fillOpacity:0,clickable:false});jurisdictionLayers.push(core,near)})}
 function clearOverlays(){Object.values(waterMarkers).forEach(m=>m.setMap(null));Object.values(overlayMarkers).forEach(m=>m.setMap(null));waterMarkers={};overlayMarkers={}}
