@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v44</title>
+<title>消防団 現場支援マップ v45</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -188,7 +188,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v44: 過去現場の読み出しボタン */
+/* v45: 過去現場の読み出しボタン */
 .history-view{
   border:0;border-radius:9px;padding:9px 11px;background:#1677ff;color:#fff;
   font-weight:700;white-space:nowrap;
@@ -314,9 +314,9 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v44 */
+/* Google Maps version v45 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
-const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
+const GOOGLE_MAPS_BROWSER_KEY='YOUR_GOOGLE_MAPS_BROWSER_KEY';
 
 function api(action, params={}){
  return new Promise((resolve,reject)=>{
@@ -558,8 +558,8 @@ async function loadAll(silent=false){
 
     clearOverlays();
 
-    // 水利の近傍検索結果はGAS側でキャッシュ。
-    // 画面側では一度だけ描画して、点滅・二重表示を防止。
+    // 水利はGAS側の近傍キャッシュを利用。
+    // 画面側ではレスポンスを一度だけ描画して、点滅・二重表示を防止。
     waterData=snap.water||[];
     waterData.forEach(addWaterMarker);
     renderStats();
