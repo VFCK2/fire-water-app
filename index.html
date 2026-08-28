@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v53</title>
+<title>消防団 現場支援マップ v54</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -324,7 +324,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v31 */
+/* Google Maps version v54 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -540,10 +540,62 @@ function startSharedPolling(){
   stopSharedPolling();
   syncTimer=setInterval(()=>{
     if(document.hidden||!incident)return;
+    syncActiveIncident();
     syncMarkersOnly();
   },5000);
 }
 function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}}
+
+// 他端末で現場終了した場合も、この端末を自動的に終了画面へ同期する。
+// getInitialData は水利を返さないため、重い水利読み込みは発生しない。
+let incidentStateSyncBusy=false;
+async function syncActiveIncident(){
+  if(!incident||historyViewMode||incidentStateSyncBusy)return;
+  incidentStateSyncBusy=true;
+  const localIncident=incident;
+  try{
+    const state=await api('getInitialData',{},10000);
+    const remote=state?.incident||null;
+    if(remote===null || remote===undefined){
+      finishLocalIncident('他の端末で現場が終了しました');
+    }else if(remote.incidentId && String(remote.incidentId)!==String(localIncident.incidentId)){
+      // 別の現場が開始された場合は、古い現場を残さず新しい現場を読み込む。
+      incidentSession++;
+      clearRoute();clearOverlays();
+      if(fireMarker)fireMarker.setMap(null);
+      if(fireCircle)fireCircle.setMap(null);
+      fireMarker=null;fireCircle=null;
+      incident=remote;
+      renderIncident(remote);
+      waterData=[];
+      $('stats').innerHTML='';$('stats').classList.add('hidden');$('stats').style.display='none';
+      refreshWaterInBackground(true,incidentSession);
+    }
+  }catch(e){
+    console.warn('incident sync',e);
+  }finally{incidentStateSyncBusy=false}
+}
+function finishLocalIncident(message){
+  stopSharedPolling();
+  incidentSession++;
+  incident=null;selectedWater=null;selectedMarker=null;
+  clearRoute();
+  if(fireMarker)fireMarker.setMap(null);
+  if(fireCircle)fireCircle.setMap(null);
+  fireMarker=null;fireCircle=null;
+  clearOverlays();
+  waterData=[];
+  $('waterList').innerHTML='';
+  $('listCount').textContent='0件';
+  $('stats').innerHTML='';
+  $('stats').classList.add('hidden');
+  $('stats').style.display='none';
+  hideIncidentBadge();
+  $('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';
+  $('address').value='';
+  showHome();
+  showToast(message||'現場を終了しました');
+}
 function syncMarkersOnly(){
   if(!incident||markerSyncBusy)return;
   markerSyncBusy=true;
@@ -1050,36 +1102,7 @@ async function endIncident(){
 
   try{
     await api('endIncident');
-
-    incident=null;
-    selectedWater=null;
-    selectedMarker=null;
-
-    clearRoute();
-    if(fireMarker)fireMarker.setMap(null);
-    if(fireCircle)fireCircle.setMap(null);
-    fireMarker=null;
-    fireCircle=null;
-    clearOverlays();
-
-    // 終了後の画面状態から水利を完全に破棄
-    waterData=[];
-    $('waterList').innerHTML='';
-    $('listCount').textContent='0件';
-    $('stats').innerHTML='';
-    $('stats').classList.add('hidden');
-    $('stats').style.display='none';
-
-    hideIncidentBadge();
-    $('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';
-    $('address').value='';
-    showHome();
-
-    // 念押し
-    $('stats').classList.add('hidden');
-    $('stats').style.display='none';
-
-    showToast('現場を終了しました');
+    finishLocalIncident('現場を終了しました');
   }catch(e){alert(e.message||e)}
 }
 
