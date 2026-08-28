@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v38: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v39: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -141,6 +141,50 @@ body.marker-placement #map{cursor:crosshair}
     font-size:11px !important;
   }
   .stats .chip b{font-size:13px !important}
+}
+
+
+/* v39: 水利数表示を約2倍に拡大し、状態ごとに色分け */
+.stats .chip{
+  padding:8px 13px !important;
+  font-size:16px !important;
+  font-weight:700 !important;
+  border:2px solid rgba(0,0,0,.18) !important;
+  border-radius:8px !important;
+  min-width:76px !important;
+}
+.stats .chip b{
+  font-size:20px !important;
+}
+.stats .chip:nth-child(1){
+  background:#ffffff !important;
+  color:#222 !important;
+}
+.stats .chip:nth-child(2){
+  background:#f2c94c !important;
+  color:#222 !important;
+}
+.stats .chip:nth-child(3){
+  background:#55b97a !important;
+  color:#fff !important;
+}
+.stats .stats-row:nth-child(2) .chip:nth-child(1){
+  background:#e76f51 !important;
+  color:#fff !important;
+}
+.stats .stats-row:nth-child(2) .chip:nth-child(2){
+  background:#777 !important;
+  color:#fff !important;
+}
+@media(max-width:699px){
+  .stats .chip{
+    padding:8px 12px !important;
+    font-size:16px !important;
+    min-width:76px !important;
+  }
+  .stats .chip b{
+    font-size:20px !important;
+  }
 }
 
 </style>
