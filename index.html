@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v51</title>
+<title>消防団 現場支援マップ v53</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -603,16 +603,26 @@ function addWaterMarker(w){
     try{old.setMap(null)}catch(e){}
     delete waterMarkers[w.id];
   }
+  // 消火栓と防火水槽は「形」で明確に区別する。
+  // 消火栓=円、防火水槽=★の5角星。状態色はこれまで通り。
+  const isTank=String(w.type||'').indexOf('防火水槽')>=0;
+  const fill=color(w);
+  const opacity=w.zone==='周辺'?.72:1;
+  const starSvg='<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"44\" height=\"44\" viewBox=\"0 0 44 44\"><polygon points=\"22,3 27.6,15.2 40.9,16.5 30.9,25.4 33.8,38.5 22,31.8 10.2,38.5 13.1,25.4 3.1,16.5 16.4,15.2\" fill=\"'+fill+'\" fill-opacity=\"'+opacity+'\" stroke=\"white\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>';
   const marker=new google.maps.Marker({
     map,
     position:{lat:Number(w.lat),lng:Number(w.lng)},
     title:w.type||'水利',
     zIndex:100+(w.zone==='周辺'?0:10),
-    icon:{
+    icon:isTank?{
+      url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(starSvg),
+      scaledSize:new google.maps.Size(30,30),
+      anchor:new google.maps.Point(15,15)
+    }:{
       path:google.maps.SymbolPath.CIRCLE,
       scale:10,
-      fillColor:color(w),
-      fillOpacity:w.zone==='周辺'?.72:1,
+      fillColor:fill,
+      fillOpacity:opacity,
       strokeColor:'#fff',
       strokeWeight:3
     }
