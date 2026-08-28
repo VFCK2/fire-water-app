@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v46</title>
+<title>消防団 現場支援マップ v47</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v46: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v47: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -539,6 +539,7 @@ async function searchFire(){
   startSharedPolling();showToast('現場を開始しました');
  }catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='検索'}
 }
+function renderJurisdiction(){jurisdictionLayers.forEach(x=>x.setMap(null));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const south=Number(a.south),west=Number(a.west),north=Number(a.north),east=Number(a.east);if(![south,west,north,east].every(isFinite))return;const core=new google.maps.Rectangle({map,bounds:{south,west,north,east},strokeColor:'#16834b',strokeWeight:2,fillColor:'#16834b',fillOpacity:.035,clickable:false});const m=Number(a.bufferM||200);const latDeg=m/111320,lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));const near=new google.maps.Rectangle({map,bounds:{south:south-latDeg,west:west-lngDeg,north:north+latDeg,east:east+lngDeg},strokeColor:'#d39b00',strokeWeight:1,strokeOpacity:1,fillOpacity:0,clickable:false});jurisdictionLayers.push(core,near)})}
 function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forEach(x=>x.classList.add('hidden'));$('headerSub').textContent=i.address;$('resultArea').classList.remove('hidden');$('searchArea').classList.add('hidden');showIncidentBadge();
  if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);
  fireMarker=new google.maps.Marker({position:{lat:Number(i.lat),lng:Number(i.lng)},map,label:{text:'🔥',fontSize:'24px'},zIndex:1000,title:'火災地点',clickable:false});
