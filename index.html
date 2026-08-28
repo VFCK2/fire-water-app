@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v49</title>
+<title>消防団 現場支援マップ v50</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v49: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v50: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -335,7 +335,7 @@ function api(action, params={}){
 
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
 let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
-let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false;
+let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false,incidentSession=0;
 let historyViewMode=false;
 let nearbyWaterClientCache=new Map();
 const defaultCenter={lat:35.5572,lng:139.7330};
@@ -531,7 +531,7 @@ async function searchFire(){
  try{
   const r=await api('geocodeAddress',{address:a});
   const d=await api('startIncident',{address:r.address,lat:r.lat,lng:r.lng,radiusM:200});
-  incident=d.incident;jurisdictionData=d.jurisdiction||jurisdictionData;
+  incidentSession++;incident=d.incident;jurisdictionData=d.jurisdiction||jurisdictionData;
   clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
   $('headerSub').textContent=incident.address;
   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
@@ -592,37 +592,27 @@ function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forE
  fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
  const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
 }
-async function refreshWaterInBackground(silent=true){
+async function refreshWaterInBackground(silent=true, session=incidentSession){
   if(!incident||waterSyncBusy)return;
   waterSyncBusy=true;
-
-  const lat=Number(incident.lat), lng=Number(incident.lng);
-  const radius=Number(incident.radiusM||200);
-
+  const currentIncident=incident;
+  const lat=Number(currentIncident.lat),lng=Number(currentIncident.lng);
+  const radius=Number(currentIncident.radiusM||200);
   try{
     const latest=await api('getNearbyWater',{lat,lng,radiusM:radius});
+    if(session!==incidentSession||!incident||incident!==currentIncident)return;
     if(Array.isArray(latest)){
       waterData=latest;
-
-      // 水利だけを差し替える。消防車・積載車・通行止めは触らない。
-      Object.values(waterMarkers).forEach(m=>{
-        try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
-      });
+      nearbyWaterClientCache.set(Number(lat).toFixed(5)+','+Number(lng).toFixed(5)+','+Number(radius),latest);
+      Object.values(waterMarkers).forEach(m=>{try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}});
       waterMarkers={};
-
       waterData.forEach(addWaterMarker);
       renderStats();
       renderList();
-
       if(!silent)showToast('✓ 最新の水利状態を更新しました');
     }
-  }catch(e){
-    console.warn('water refresh',e);
-    // 水利更新だけの失敗では、既に表示している水利を消さない。
-    // 手動更新でもエラーダイアログを出さず、次回更新へ回す。
-  }finally{
-    waterSyncBusy=false;
-  }
+  }catch(e){console.warn('water refresh',e)}
+  finally{waterSyncBusy=false}
 }
 
 async function loadAll(silent=false){
@@ -670,7 +660,7 @@ async function loadAll(silent=false){
     });
 
     // 水利はバックグラウンド。ここを待たないので「最新情報」で1分以上固まらない。
-    refreshWaterInBackground(silent);
+    refreshWaterInBackground(silent,incidentSession);
 
   }catch(e){
     console.error(e);
@@ -1002,7 +992,47 @@ function renderRouteInfo(meters,fallback,warnings=[]){const hose=20,count=Math.c
 function recalcHose(){const meters=Number($('routeInfo').dataset.routeMeters||0);if(meters)renderRouteInfo(meters,false)}
 
 function confirmEndIncident(){closeSheet('manageSheet');setTimeout(endIncident,50)}
-async function endIncident(){if(!confirm('今回の現場を終了します。現場の履歴は残ります。\n本当に終了しますか？'))return;stopSharedPolling();try{await api('endIncident');incident=null;selectedWater=null;selectedMarker=null;clearRoute();if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);fireMarker=null;fireCircle=null;clearOverlays();hideIncidentBadge();$('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';$('stats').classList.add('hidden');$('stats').style.display='none';$('address').value='';showHome();showToast('現場を終了しました')}catch(e){alert(e.message||e)}}
+async function endIncident(){
+  if(!confirm('今回の現場を終了します。現場の履歴は残ります。\n本当に終了しますか？'))return;
+  stopSharedPolling();
+
+  // 現場セッションを無効化。終了前に開始された水利通信の結果を捨てる。
+  incidentSession++;
+
+  try{
+    await api('endIncident');
+
+    incident=null;
+    selectedWater=null;
+    selectedMarker=null;
+
+    clearRoute();
+    if(fireMarker)fireMarker.setMap(null);
+    if(fireCircle)fireCircle.setMap(null);
+    fireMarker=null;
+    fireCircle=null;
+    clearOverlays();
+
+    // 終了後の画面状態から水利を完全に破棄
+    waterData=[];
+    $('waterList').innerHTML='';
+    $('listCount').textContent='0件';
+    $('stats').innerHTML='';
+    $('stats').classList.add('hidden');
+    $('stats').style.display='none';
+
+    hideIncidentBadge();
+    $('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';
+    $('address').value='';
+    showHome();
+
+    // 念押し
+    $('stats').classList.add('hidden');
+    $('stats').style.display='none';
+
+    showToast('現場を終了しました');
+  }catch(e){alert(e.message||e)}
+}
 
 // iPhone Safariの古いHTML/JSを再利用しにくくする
 try{
