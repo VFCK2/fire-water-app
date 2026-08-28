@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v40</title>
+<title>消防団 現場支援マップ v41</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v40: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v41: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -720,7 +720,8 @@ async function removeSelectedMarker(){
   if(!confirm('このマーカーを削除しますか？'))return;
   const markerId=selectedMarker.markerId;
   try{
-    await api('deleteMarker',{markerId});
+    const result=await api('deleteMarker',{markerId});
+    if(result!==true)throw new Error('サーバー側でマーカーを削除できませんでした。');
     // サーバー保存が成功したら、画面上のマーカーも即時に消す。
     // 直後に全体再取得すると古いスナップショットで一瞬復活することがあるため、
     // 削除時はloadAll()を呼ばず、対象だけローカルから除去する。
