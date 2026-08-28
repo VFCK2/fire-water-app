@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v37: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v38: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -92,6 +92,55 @@ body.marker-placement #map{cursor:crosshair}
   padding-right:3px !important;
   white-space:nowrap !important;
   font-size:12px !important;
+}
+
+
+/* v38: 水利件数をコンパクトな2段表示に固定 */
+.stats{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:4px !important;
+  width:max-content !important;
+  max-width:none !important;
+  margin:0 auto !important;
+  padding:2px !important;
+}
+.stats::before{
+  content:none !important;
+}
+.stats .stats-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+}
+.stats .chip{
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  white-space:nowrap !important;
+  padding:4px 7px !important;
+  margin:0 !important;
+  font-size:11px !important;
+  line-height:1.15 !important;
+}
+.stats .chip b{font-size:13px !important}
+@media(max-width:699px){
+  .stats{
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    bottom:calc(env(safe-area-inset-bottom) + 70px) !important;
+    max-width:none !important;
+  }
+  .stats .chip{
+    padding:4px 7px !important;
+    font-size:11px !important;
+  }
+  .stats .chip b{font-size:13px !important}
 }
 
 </style>
@@ -385,7 +434,20 @@ function showWater(w){
 function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=false)}
 async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showToast('保存中…');try{await api('saveWaterStatus',{waterId:water.id,status});showToast('✓ '+status+' に更新しました')}catch(e){alert(e.message||e);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
 
-function renderStats(){const c={all:waterData.length,unknown:0,ok:0,busy:0,bad:0};waterData.forEach(w=>{if(w.status==='未確認')c.unknown++;else if(w.status==='使用可能')c.ok++;else if(w.status==='消防署使用中')c.busy++;else if(w.status==='使用困難')c.bad++});const s=$('stats');s.innerHTML=`<div class="chip" onclick="openList('all')">全て <b>${c.all}</b></div><div class="chip" onclick="openList('unknown')">未確認 <b>${c.unknown}</b></div><div class="chip" style="color:#087b3d" onclick="openList('ok')">使用可 <b>${c.ok}</b></div><div class="chip" style="color:#a85d00" onclick="openList('busy')">署使用 <b>${c.busy}</b></div><div class="chip" style="color:#c52219" onclick="openList('bad')">使用困難 <b>${c.bad}</b></div>`;s.classList.remove('hidden')}
+function renderStats(){
+  const s={all:waterData.length,unknown:waterData.filter(w=>w.status==='未確認').length,ok:waterData.filter(w=>w.status==='使用可能').length,busy:waterData.filter(w=>w.status==='消防署使用中').length,bad:waterData.filter(w=>w.status==='使用困難').length};
+  $('stats').innerHTML=
+    '<div class="stats-row">'+
+      '<div class="chip">全て <b>'+s.all+'</b></div>'+
+      '<div class="chip">未確認 <b>'+s.unknown+'</b></div>'+
+      '<div class="chip">使用可 <b>'+s.ok+'</b></div>'+
+    '</div>'+
+    '<div class="stats-row">'+
+      '<div class="chip">署使用 <b>'+s.busy+'</b></div>'+
+      '<div class="chip">使用困難 <b>'+s.bad+'</b></div>'+
+    '</div>';
+  $('stats').classList.remove('hidden');
+}
 function renderList(filter='all'){const box=$('waterList');const arr=filter==='all'?waterData:waterData.filter(w=>filter==='unknown'?w.status==='未確認':filter==='ok'?w.status==='使用可能':filter==='busy'?w.status==='消防署使用中':w.status==='使用困難');$('listCount').textContent=arr.length+'件';box.innerHTML=arr.map(w=>`<div class="list-item" onclick="showWaterById('${escapeHtml(w.id)}')"><div class="dot" style="background:${color(w)}"></div><div class="list-main"><div class="list-name">${escapeHtml(w.type)}</div><div class="list-sub">直線 ${w.distance}m</div></div><div class="list-status" style="color:${color(w)}">${escapeHtml(w.status)}</div></div>`).join('')||'<div class="distance" style="padding:12px 2px">該当する水利はありません。</div>'}
 function showWaterById(id){const w=waterData.find(x=>String(x.id)===String(id));if(!w)return;map.panTo({lat:Number(w.lat),lng:Number(w.lng)});map.setZoom(17);showWater(w)}
 function openList(filter='all'){closeAllSheets();renderList(filter);$('listSheet').classList.remove('hidden')}
