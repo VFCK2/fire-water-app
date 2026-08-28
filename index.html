@@ -79,7 +79,7 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 
-/* v36: 水利ウィンドウの状態ボタンを4つ横一列 */
+/* v37: 水利ウィンドウの状態ボタンを4つ横一列 */
 #waterSheet .actiongrid{
   display:grid !important;
   grid-template-columns:repeat(4,minmax(0,1fr)) !important;
@@ -633,7 +633,7 @@ async function calculateRouteToWater(w){
   box.innerHTML='📏 <b>ホース敷設距離を取得できませんでした</b><br><span style="font-weight:600">直線 '+w.distance+'m を参考表示しています。</span>';
  }
 }
-function renderRouteInfo(meters,fallback,warnings=[]){const hose=Number($('hoseLength').value||20),count=Math.ceil(meters/hose),extra=Math.max(1,count+1);$('routeInfo').innerHTML='📏 ホース敷設距離<div class="route-main">'+meters+'m</div><div>🧯 '+hose+'mホース：<b>最低 '+count+'本</b> ／ 余裕をみて <b>'+extra+'本程度</b></div><div class="route-note">※徒歩ルートを基準にした敷設目安。実際は現場の通行状況を優先。</div>'+(warnings.length?'<div class="route-note">※Googleの徒歩ルートに注意事項があります。</div>':'')+(fallback?'<div>※参考値</div>':'')}
+function renderRouteInfo(meters,fallback,warnings=[]){const hose=20,count=Math.ceil(meters/hose),extra=Math.max(1,count+1);$('routeInfo').innerHTML='📏 ホース敷設距離<div class="route-main">'+meters+'m</div><div>🧯 '+hose+'mホース：<b>最低 '+count+'本</b> ／ 余裕をみて <b>'+extra+'本程度</b></div><div class="route-note">※徒歩ルートを基準にした敷設目安。実際は現場の通行状況を優先。</div>'+(warnings.length?'<div class="route-note">※Googleの徒歩ルートに注意事項があります。</div>':'')+(fallback?'<div>※参考値</div>':'')}
 function recalcHose(){const meters=Number($('routeInfo').dataset.routeMeters||0);if(meters)renderRouteInfo(meters,false)}
 
 function confirmEndIncident(){closeSheet('manageSheet');setTimeout(endIncident,50)}
