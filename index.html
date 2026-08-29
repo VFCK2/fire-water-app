@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v55</title>
+<title>消防団 現場支援マップ v56</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -324,7 +324,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v55 */
+/* Google Maps version v56 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -350,7 +350,7 @@ function setHistoryLoading(show,title='処理中…',sub='しばらくお待ち�
 
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
 let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
-let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false,incidentSession=0,waterSyncTimer=null,waterSyncSeq=0;
+let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false,incidentSession=0;
 let historyViewMode=false;
 let nearbyWaterClientCache=new Map();
 const defaultCenter={lat:35.5572,lng:139.7330};
@@ -544,7 +544,7 @@ function startSharedPolling(){
     syncMarkersOnly();
   },5000);
 }
-function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}stopWaterSync();}
+function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}}
 
 // 他端末で現場終了した場合も、この端末を自動的に終了画面へ同期する。
 // getInitialData は水利を返さないため、重い水利読み込みは発生しない。
@@ -569,7 +569,7 @@ async function syncActiveIncident(){
       renderIncident(remote);
       waterData=[];
       $('stats').innerHTML='';$('stats').classList.add('hidden');$('stats').style.display='none';
-      loadNearbyWaterOnce(true).finally(()=>startWaterSync());
+      refreshWaterInBackground(true,incidentSession);
     }
   }catch(e){
     console.warn('incident sync',e);
@@ -627,7 +627,7 @@ async function searchFire(){
   $('headerSub').textContent=incident.address;
   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
   waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
-  startSharedPolling();loadNearbyWaterOnce(true).finally(()=>startWaterSync());showToast('現場を開始しました');
+  startSharedPolling();showToast('現場を開始しました');
  }catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='検索'}
 }
 
@@ -693,91 +693,27 @@ function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forE
  fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
  const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
 }
-async function loadNearbyWaterOnce(silent=true){
+async function refreshWaterInBackground(silent=true, session=incidentSession){
   if(!incident||waterSyncBusy)return;
   waterSyncBusy=true;
-  const mySession=incidentSession, currentIncident=incident;
+  const currentIncident=incident;
+  const lat=Number(currentIncident.lat),lng=Number(currentIncident.lng);
+  const radius=Number(currentIncident.radiusM||200);
   try{
-    // 初回だけ、現在現場の「半径radius内」の水利を取得。
-    // 30個固定ではなく、実際の対象件数だけ返す。
-    const latest=await api('getNearbyWater',{
-      lat:Number(currentIncident.lat),
-      lng:Number(currentIncident.lng),
-      radiusM:Number(currentIncident.radiusM||200)
-    },30000);
-
-    if(mySession!==incidentSession||!incident||incident!==currentIncident)return;
+    const latest=await api('getNearbyWater',{lat,lng,radiusM:radius});
+    if(session!==incidentSession||!incident||incident!==currentIncident)return;
     if(Array.isArray(latest)){
       waterData=latest;
-      const key=Number(currentIncident.lat).toFixed(5)+','+
-                Number(currentIncident.lng).toFixed(5)+','+
-                Number(currentIncident.radiusM||200);
-      nearbyWaterClientCache.set(key,latest);
-
-      Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
+      nearbyWaterClientCache.set(Number(lat).toFixed(5)+','+Number(lng).toFixed(5)+','+Number(radius),latest);
+      Object.values(waterMarkers).forEach(m=>{try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}});
       waterMarkers={};
       waterData.forEach(addWaterMarker);
       renderStats();
       renderList();
+      if(!silent)showToast('✓ 最新の水利状態を更新しました');
     }
-  }catch(e){
-    console.warn('initial water load',e);
-    if(!silent)showToast('水利の取得に時間がかかっています');
-  }finally{
-    if(mySession===incidentSession)waterSyncBusy=false;
-  }
-}
-
-async function syncWaterStatusesOnly(){
-  if(!incident||waterSyncBusy)return;
-  const mySession=incidentSession, currentIncident=incident;
-  waterSyncBusy=true;
-  try{
-    // ここでは水利データ全体を再検索しない。
-    // 現在の現場に紐づく「変更された状態」だけを取得する。
-    const result=await api('getActiveWaterStatus',{},10000);
-    if(mySession!==incidentSession||!incident||incident!==currentIncident)return;
-    if(!result||String(result.incidentId)!==String(currentIncident.incidentId))return;
-
-    const states=result.states||{};
-    let changed=false;
-    waterData.forEach(w=>{
-      const st=states[String(w.id)];
-      if(st && w.status!==st){
-        w.status=st;
-        changed=true;
-      }
-    });
-    if(changed){
-      waterData.forEach(w=>{
-        if(waterMarkers[w.id]){
-          try{
-            waterMarkers[w.id].setMap(null);
-            delete waterMarkers[w.id];
-          }catch(e){}
-        }
-        addWaterMarker(w);
-      });
-      renderStats();
-      renderList();
-    }
-  }catch(e){
-    console.warn('water status sync',e);
-  }finally{
-    if(mySession===incidentSession)waterSyncBusy=false;
-  }
-}
-
-function startWaterSync(){
-  if(waterSyncTimer)clearInterval(waterSyncTimer);
-  waterSyncTimer=setInterval(()=>syncWaterStatusesOnly(),5000);
-  syncWaterStatusesOnly();
-}
-
-function stopWaterSync(){
-  if(waterSyncTimer){clearInterval(waterSyncTimer);waterSyncTimer=null;}
-  waterSyncSeq++;
-  waterSyncBusy=false;
+  }catch(e){console.warn('water refresh',e)}
+  finally{waterSyncBusy=false}
 }
 
 async function loadAll(silent=false){
@@ -825,7 +761,7 @@ async function loadAll(silent=false){
     });
 
     // 水利はバックグラウンド。ここを待たないので「最新情報」で1分以上固まらない。
-    if(!waterData.length)loadNearbyWaterOnce(silent);else syncWaterStatusesOnly();
+    refreshWaterInBackground(silent,incidentSession);
 
   }catch(e){
     console.error(e);
