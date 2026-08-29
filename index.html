@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v58</title>
+<title>消防団 現場支援マップ v59</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -324,7 +324,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v58 */
+/* Google Maps version v59 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -351,6 +351,7 @@ function setHistoryLoading(show,title='処理中…',sub='しばらくお待ち�
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
 let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
 let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false,incidentSession=0;
+let waterStatusTimer=null,waterStatusBusy=false,waterStatusSeq=0;
 let historyViewMode=false;
 let nearbyWaterClientCache=new Map();
 const defaultCenter={lat:35.5572,lng:139.7330};
@@ -724,6 +725,7 @@ async function syncWaterStatusesOnly(){
   const ids=waterData.map(w=>String(w.id));
   waterStatusBusy=true;
   try{
+    if(typeof api!=='function')return;
     const result=await api('getWaterStatuses',{waterIds:ids});
     if(seq!==waterStatusSeq || !incident || incident!==currentIncident)return;
     if(!result || String(result.incidentId)!==String(currentIncident.incidentId))return;
@@ -803,7 +805,7 @@ async function loadAll(silent=false){
     console.error(e);
     if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e));
   }finally{
-    syncBusy=false,waterStatusTimer=null,waterStatusBusy=false,waterStatusSeq=0;
+    syncBusy=false;
   }
 }
 
