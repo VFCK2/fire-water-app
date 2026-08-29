@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v57</title>
+<title>消防団 現場支援マップ v58</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -324,7 +324,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v57 */
+/* Google Maps version v58 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -520,7 +520,7 @@ async function initGoogleMap(){
   const d=await api('getInitialData');
   jurisdictionData=d?.jurisdiction||[];renderJurisdiction();incident=d?.incident||null;
   if(incident){renderIncident(incident);await loadAll(true)}else{showHome()}
-  loadWaterInfo();startSharedPolling();startWaterStatusSync();setTimeout(()=>google.maps.event.trigger(map,'resize'),200);
+  loadWaterInfo();startSharedPolling();startWaterStatusPolling();setTimeout(()=>google.maps.event.trigger(map,'resize'),200);
  }catch(e){console.error(e);showHome();alert('初期データの読み込みに失敗しました。\n'+(e.message||e))}
 }
 
@@ -545,7 +545,7 @@ function startSharedPolling(){
     syncMarkersOnly();
   },5000);
 }
-function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}stopWaterStatusSync();}
+function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}stopWaterStatusPolling()}
 
 // 他端末で現場終了した場合も、この端末を自動的に終了画面へ同期する。
 // getInitialData は水利を返さないため、重い水利読み込みは発生しない。
@@ -628,7 +628,7 @@ async function searchFire(){
   $('headerSub').textContent=incident.address;
   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
   waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
-  startSharedPolling();showToast('現場を開始しました');
+  startSharedPolling();startWaterStatusPolling();showToast('現場を開始しました');
  }catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='検索'}
 }
 
@@ -719,56 +719,37 @@ async function refreshWaterInBackground(silent=true, session=incidentSession){
 
 
 async function syncWaterStatusesOnly(){
-  if(!incident || waterSyncBusy || !waterData.length)return;
-  const seq=waterStatusSeq;
-  const currentIncident=incident;
+  if(!incident || waterStatusBusy || !waterData.length)return;
+  const seq=waterStatusSeq, currentIncident=incident;
   const ids=waterData.map(w=>String(w.id));
-
-  waterSyncBusy=true;
+  waterStatusBusy=true;
   try{
-    // Only the IDs currently inside this incident's radius are sent.
-    const result=await api('getWaterStatuses',{waterIds:ids},10000);
+    const result=await api('getWaterStatuses',{waterIds:ids});
     if(seq!==waterStatusSeq || !incident || incident!==currentIncident)return;
     if(!result || String(result.incidentId)!==String(currentIncident.incidentId))return;
-
     const states=result.states||{};
     let changed=false;
-
     waterData.forEach(w=>{
-      const id=String(w.id);
-      const next=states[id]||'未確認';
-      if(w.status!==next){
-        w.status=next;
-        changed=true;
-      }
+      const next=states[String(w.id)]||'未確認';
+      if(w.status!==next){w.status=next;changed=true;}
     });
-
     if(changed){
-      Object.values(waterMarkers).forEach(m=>{
-        try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
-      });
+      Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
       waterMarkers={};
       waterData.forEach(addWaterMarker);
       renderStats();
       renderList();
     }
-  }catch(e){
-    console.warn('water status sync',e);
-  }finally{
-    if(seq===waterStatusSeq)waterSyncBusy=false;
-  }
+  }catch(e){console.warn('water status sync failed',e)}
+  finally{if(seq===waterStatusSeq)waterStatusBusy=false}
 }
-
-function startWaterStatusSync(){
+function startWaterStatusPolling(){
   if(waterStatusTimer)clearInterval(waterStatusTimer);
   waterStatusTimer=setInterval(syncWaterStatusesOnly,5000);
-  syncWaterStatusesOnly();
 }
-
-function stopWaterStatusSync(){
-  if(waterStatusTimer){clearInterval(waterStatusTimer);waterStatusTimer=null;}
-  waterStatusSeq++;
-  waterSyncBusy=false;
+function stopWaterStatusPolling(){
+  if(waterStatusTimer){clearInterval(waterStatusTimer);waterStatusTimer=null}
+  waterStatusSeq++; waterStatusBusy=false;
 }
 
 async function loadAll(silent=false){
@@ -822,7 +803,7 @@ async function loadAll(silent=false){
     console.error(e);
     if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e));
   }finally{
-    syncBusy=false;
+    syncBusy=false,waterStatusTimer=null,waterStatusBusy=false,waterStatusSeq=0;
   }
 }
 
@@ -836,7 +817,7 @@ function showWater(w){
  calculateRouteToWater(w);
 }
 function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=historyViewMode)}
-async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showToast('保存中…');try{await api('saveWaterStatus',{waterId:water.id,status});showToast('✓ '+status+' に更新しました')}catch(e){alert(e.message||e);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
+async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showToast('⏳ 保存しています…');try{await api('saveWaterStatus',{waterId:water.id,status});showToast('✓ '+status+' に更新しました')}catch(e){alert(e.message||e);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
 
 function renderStats(){
   const s={all:waterData.length,unknown:waterData.filter(w=>w.status==='未確認').length,ok:waterData.filter(w=>w.status==='使用可能').length,busy:waterData.filter(w=>w.status==='消防署使用中').length,bad:waterData.filter(w=>w.status==='使用困難').length};
@@ -1092,7 +1073,7 @@ async function removeSelectedMarker(){
     }
     selectedMarker=null;
     closeSheet('markerSheet');
-    showToast('削除しました');
+    showToast('✓ 削除しました');
   }catch(e){
     alert(e.message||e);
   }
