@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<!-- v63: processing modal completion fix -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
@@ -945,9 +946,9 @@ function onMapClick(e){
      addIncidentMarker(m);
     }
 
-    showToast(name+'を登録しました');
+    finishProcessing('✓ 登録しました',name+'を保存しました',650);
    }else{
-    showToast('保存できませんでした');
+    failProcessing('保存に失敗しました','サーバーから登録結果を取得できませんでした',1300);
    }
   }).catch(err=>{
    // 保存失敗時は仮マーカーを残さず、エラーを知らせる。
@@ -955,7 +956,7 @@ function onMapClick(e){
     overlayMarkers[tempId].setMap(null);
     delete overlayMarkers[tempId];
    }
-   alert('マーカーを保存できませんでした。\n'+(err.message||err));
+   failProcessing('保存に失敗しました',err.message||'もう一度お試しください',1300);
   });
   return;
  }
@@ -989,7 +990,6 @@ async function finishRoad(){
  $('drawSheet').classList.add('hidden');
  setPlacementMode(false);
 
- showProcessing('通行止めを保存中…','通行止め区間をサーバーへ保存しています');
  showProcessing('通行止めを保存中…','通行止め区間をサーバーへ保存しています');
  try{
   const m=await api('addMarker',{
@@ -1032,7 +1032,7 @@ async function finishRoad(){
   }
  }catch(e){
   // エラー時も仮線を消さない。
-  alert('通行止めを保存できませんでした。\n'+(e.message||e));
+  failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);
  }
 }
 function cancelDraw(){cancelMarkerMode()}
