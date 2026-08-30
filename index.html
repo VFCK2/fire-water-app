@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v65</title>
+<title>消防団 現場支援マップ v66</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -326,7 +326,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v62 */
+/* Google Maps version v66 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -352,9 +352,11 @@ function setHistoryLoading(show,title='処理中…',sub='しばらくお待ち�
  el.classList.toggle('show',!!show);
 }
 function showProcessing(title='処理中…',sub='しばらくお待ちください'){
+ hideToast();
  setHistoryLoading(true,title,sub);
 }
 function finishProcessing(title='完了しました',sub='処理が完了しました',delay=800){
+ hideToast();
  const el=$('historyLoading');if(!el)return;
  const card=el.querySelector('.history-loading-card');
  if(card)card.classList.add('done');
@@ -363,6 +365,7 @@ function finishProcessing(title='完了しました',sub='処理が完了しま�
  setTimeout(()=>setHistoryLoading(false),delay);
 }
 function failProcessing(title='処理に失敗しました',sub='もう一度お試しください',delay=1300){
+ hideToast();
  const el=$('historyLoading');if(!el)return;
  const card=el.querySelector('.history-loading-card');
  if(card)card.classList.add('error');
@@ -383,7 +386,8 @@ function showIncidentBadge(){}
 function hideIncidentBadge(){}
 
 
-function showToast(msg){const el=$('toast');el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',1800)}
+function hideToast(){const el=$('toast');if(!el)return;el.style.display='none';clearTimeout(showToast.timer)}
+function showToast(msg){const el=$('toast');if(!el)return;el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',1800)}
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function closeAllSheets(){document.querySelectorAll('.sheet').forEach(x=>x.classList.add('hidden'))}
 function closeSheet(id){$(id).classList.add('hidden');if(id==='drawSheet')cancelMarkerMode();if(id==='waterSheet'&&lastRouteMeters){$('routeSummary').textContent='📏 ホース敷設距離 '+lastRouteMeters+'m';$('routeSummary').classList.remove('hidden')}}
@@ -581,8 +585,11 @@ async function syncActiveIncident(){
     const state=await api('getInitialData',{},10000);
     const remote=state?.incident||null;
     if(remote===null || remote===undefined){
+      // 他端末終了は従来の小型トーストを使わず、現場終了と同じ中央ウィンドウで通知する。
+      hideToast();
       finishLocalIncident();
-      finishProcessing('現場を終了しました','他の端末で現場終了が反映されました',900);
+      showProcessing('現場を終了しました','他の端末で現場終了が反映されました');
+      finishProcessing('現場を終了しました','他の端末で現場終了が反映されました',1200);
     }else if(remote.incidentId && String(remote.incidentId)!==String(localIncident.incidentId)){
       // 別の現場が開始された場合は、古い現場を残さず新しい現場を読み込む。
       incidentSession++;
