@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v64</title>
+<title>消防団 現場支援マップ v65</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -581,7 +581,8 @@ async function syncActiveIncident(){
     const state=await api('getInitialData',{},10000);
     const remote=state?.incident||null;
     if(remote===null || remote===undefined){
-      finishLocalIncident('他の端末で現場が終了しました');
+      finishLocalIncident();
+      finishProcessing('現場を終了しました','他の端末で現場終了が反映されました',900);
     }else if(remote.incidentId && String(remote.incidentId)!==String(localIncident.incidentId)){
       // 別の現場が開始された場合は、古い現場を残さず新しい現場を読み込む。
       incidentSession++;
@@ -618,8 +619,8 @@ function finishLocalIncident(message){
   $('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';
   $('address').value='';
   showHome();
-  showToast(message||'現場を終了しました');
 }
+
 function syncMarkersOnly(){
   if(!incident||markerSyncBusy)return;
   markerSyncBusy=true;
@@ -1169,7 +1170,7 @@ async function endIncident(){
   showProcessing('現場を終了中…','現場データを保存して終了しています');
   try{
     await api('endIncident');
-    finishLocalIncident('現場を終了しました');
+    finishLocalIncident();
     finishProcessing('現場を終了しました','履歴として保存されました',900);
   }catch(e){failProcessing('現場の終了に失敗しました',e.message||'もう一度お試しください',1500)}
 }
