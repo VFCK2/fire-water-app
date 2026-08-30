@@ -210,7 +210,7 @@ body.marker-placement #map{cursor:crosshair}
 .history-loading-card{min-width:250px;max-width:82vw;background:rgba(255,255,255,.98);border-radius:18px;padding:18px 20px;text-align:center;box-shadow:0 14px 45px rgba(0,0,0,.3)}
 .history-spinner{width:30px;height:30px;margin:0 auto 10px;border:4px solid #e2e5e9;border-top-color:#1677ff;border-radius:50%;animation:historySpin .8s linear infinite}
 .history-loading-title{font-size:16px;font-weight:900}.history-loading-sub{font-size:11px;color:#6b7077;margin-top:4px}
-.history-loading-card.done .history-spinner,.history-loading-card.error .history-spinner{display:none}.history-loading-card.done .history-loading-title::before{content:'✓ ';font-size:22px}.history-loading-card.error .history-loading-title::before{content:'! ';font-size:22px}
+.history-loading-card.done .history-spinner,.history-loading-card.error .history-spinner{display:none}.history-loading-card.done .history-loading-title::before{content:''}.history-loading-card.error .history-loading-title::before{content:'! ';font-size:22px}
 @keyframes historySpin{to{transform:rotate(360deg)}}
 .history-action-busy{opacity:.6!important;pointer-events:none}
 </style>
@@ -395,7 +395,7 @@ async function refreshFromManage(){
   showProcessing('最新情報を更新中…','現場の最新状態を取得しています');
   try{
     await loadAll(false);
-    finishProcessing('✓ 更新しました','最新情報を取得しました',650);
+    finishProcessing('更新しました','最新情報を取得しました',650);
   }catch(e){
     failProcessing('更新に失敗しました',e.message||'もう一度お試しください');
   }
@@ -456,7 +456,7 @@ async function deleteHistory(incidentId){
   showProcessing('過去現場を削除中…','サーバーから履歴と関連データを削除しています');
   try{
     await api('deleteIncident',{incidentId},30000);
-    finishProcessing('✓ 削除しました','過去現場と関連データを削除しました',650);
+    finishProcessing('削除しました','過去現場と関連データを削除しました',650);
     await openHistory();
   }catch(e){
     failProcessing('削除に失敗しました',e.message||'もう一度お試しください',1300);
@@ -652,7 +652,7 @@ async function searchFire(){
   $('headerSub').textContent=incident.address;
   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
   waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
-  startSharedPolling();startWaterStatusPolling();finishProcessing('✓ 現場を開始しました','周辺の水利を表示しています',700);
+  startSharedPolling();startWaterStatusPolling();finishProcessing('現場を開始しました','周辺の水利を表示しています',700);
  }catch(e){failProcessing('現場の開始に失敗しました',e.message||'もう一度お試しください',1500)}finally{b.disabled=false;b.textContent='検索'}
 }
 
@@ -735,7 +735,7 @@ async function refreshWaterInBackground(silent=true, session=incidentSession){
       waterData.forEach(addWaterMarker);
       renderStats();
       renderList();
-      if(!silent)showToast('✓ 最新の水利状態を更新しました');
+      if(!silent)showToast('最新の水利状態を更新しました');
     }
   }catch(e){console.warn('water refresh',e)}
   finally{waterSyncBusy=false}
@@ -844,7 +844,7 @@ function showWater(w){
  calculateRouteToWater(w);
 }
 function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=historyViewMode)}
-async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showProcessing('水利情報を保存中…','状態をサーバーへ保存しています');try{await api('saveWaterStatus',{waterId:water.id,status});finishProcessing('✓ 保存しました',status+' に更新しました',650)}catch(e){failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
+async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showProcessing('水利情報を保存中…','状態をサーバーへ保存しています');try{await api('saveWaterStatus',{waterId:water.id,status});finishProcessing('保存しました',status+' に更新しました',650)}catch(e){failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
 
 function renderStats(){
   const s={all:waterData.length,unknown:waterData.filter(w=>w.status==='未確認').length,ok:waterData.filter(w=>w.status==='使用可能').length,busy:waterData.filter(w=>w.status==='消防署使用中').length,bad:waterData.filter(w=>w.status==='使用困難').length};
@@ -946,7 +946,7 @@ function onMapClick(e){
      addIncidentMarker(m);
     }
 
-    finishProcessing('✓ 登録しました',name+'を保存しました',650);
+    finishProcessing('登録しました',name+'を保存しました',650);
    }else{
     failProcessing('保存に失敗しました','サーバーから登録結果を取得できませんでした',1300);
    }
@@ -1020,12 +1020,12 @@ async function finishRoad(){
    overlayMarkers[m.markerId]=oldLine;
    tempLine=null;
    tempRoad=[];
-   finishProcessing('✓ 登録しました','通行止めを保存しました',650);
+   finishProcessing('登録しました','通行止めを保存しました',650);
   }else if(m){
    addIncidentMarker(m);
    tempLine=null;
    tempRoad=[];
-   finishProcessing('✓ 登録しました','通行止めを保存しました',650);
+   finishProcessing('登録しました','通行止めを保存しました',650);
   }else{
    // 保存失敗時は仮線を残して、場所を確認できるようにする。
    failProcessing('保存に失敗しました','サーバーから登録結果を取得できませんでした');
@@ -1103,7 +1103,7 @@ async function removeSelectedMarker(){
     }
     selectedMarker=null;
     closeSheet('markerSheet');
-    finishProcessing('✓ 削除しました','マーカーを削除しました',650);
+    finishProcessing('削除しました','マーカーを削除しました',650);
   }catch(e){
     failProcessing('削除に失敗しました',e.message||'もう一度お試しください',1300);
   }
@@ -1170,7 +1170,7 @@ async function endIncident(){
   try{
     await api('endIncident');
     finishLocalIncident('現場を終了しました');
-    finishProcessing('✓ 現場を終了しました','履歴として保存されました',900);
+    finishProcessing('現場を終了しました','履歴として保存されました',900);
   }catch(e){failProcessing('現場の終了に失敗しました',e.message||'もう一度お試しください',1500)}
 }
 
