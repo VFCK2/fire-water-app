@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v72: 警備マーカー移動の他端末同期＋マーカー操作ボタン横一列を修正 -->
+<!-- v73: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v72</title>
+<title>消防団 現場支援マップ v73</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -61,7 +61,7 @@ body.marker-placement #map{cursor:crosshair}
 
 /* v21 mobile readability */
 .topbar{z-index:1400}.topcard{border-radius:12px}.searchbar .input{height:40px;font-size:16px}.searchbar .btn{height:40px;font-size:15px;padding:0 16px}.address-display{font-size:15px;line-height:1.3}.incident-title{min-height:36px}.chip{font-size:13px;padding:8px 10px}.chip b{font-size:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 66px);gap:6px}.chip{box-shadow:0 3px 12px rgba(0,0,0,.18)}
-.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:9px 10px}.route-main{font-size:28px;line-height:1.1}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:10px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}.marker-sheet .actiongrid.single-action{grid-template-columns:160px!important;justify-content:center}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.96);border-radius:12px;padding:7px 12px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:17px;font-weight:900;color:#14548a;white-space:nowrap}.route-summary.hidden{display:none}
+.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:9px 10px}.route-main{font-size:28px;line-height:1.1}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:10px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}.marker-sheet .actiongrid.single-action{grid-template-columns:160px!important;justify-content:center}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.96);border-radius:12px;padding:7px 12px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:17px;font-weight:900;color:#14548a;white-space:nowrap}.route-summary.hidden{display:none}
 @media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px)}#mapControls{top:calc(env(safe-area-inset-top) + 118px);right:8px;z-index:1600}.fab{width:50px;height:50px;font-size:24px;border-radius:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 70px)}}
 
 .history-sheet{max-height:65dvh}
@@ -1062,7 +1062,7 @@ function onMapClick(e){
    path:tempRoad,
    strokeColor:'#ff3b30',
    strokeWeight:10,
-   strokeOpacity:.95,
+   strokeOpacity:.58,
    clickable:false,
    zIndex:900
   });
