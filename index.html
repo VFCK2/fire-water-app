@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v77: マーカー追加ボタン4列＋通行止め半透明 -->
+<!-- v78: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v77</title>
+<title>消防団 現場支援マップ v78</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -215,7 +215,7 @@ body.marker-placement #map{cursor:crosshair}
 @keyframes historySpin{to{transform:rotate(360deg)}}
 .history-action-busy{opacity:.6!important;pointer-events:none}
 
-/* v77: 現場マーカー追加ボタンを4つ横一列 */
+/* v78: 現場マーカー追加ボタンを4つ横一列 */
 .marker-add-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
 .marker-add-btn{min-width:0!important;width:100%!important;min-height:60px!important;padding:5px 3px!important;font-size:24px!important}
 .marker-add-btn span{font-size:11px!important}
@@ -582,10 +582,15 @@ async function loadWaterInfo(){return null}
 async function refreshSharedState(){if(!incident){await loadWaterInfo();return}await loadAll(false);showToast('最新状態を取得しました')}
 function startSharedPolling(){
   stopSharedPolling();
+  // 現場検索前も軽量な「現場開始確認」だけは続ける。
+  // これにより、アプリを開いたまま待機している端末も、
+  // 他端末で開始された現場を自動表示できる。
   syncTimer=setInterval(()=>{
-    if(document.hidden||!incident)return;
+    if(document.hidden)return;
     syncActiveIncident();
-    syncMarkersOnly();
+    if(incident){
+      syncMarkersOnly();
+    }
   },5000);
 }
 function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}stopWaterStatusPolling()}
@@ -595,14 +600,38 @@ function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=nu
 let incidentStateSyncBusy=false;
 const pendingMarkerIds=new Set();
 async function syncActiveIncident(){
-  if(!incident||historyViewMode||incidentStateSyncBusy)return;
+  if(historyViewMode||incidentStateSyncBusy)return;
   incidentStateSyncBusy=true;
   const localIncident=incident;
   try{
+    // getInitialData は水利一覧を返さない軽量チェック。
+    // 現場開始前の端末でも5秒ごとにここだけ確認する。
     const state=await api('getInitialData',{},10000);
     const remote=state?.incident||null;
+
+    if(!localIncident){
+      if(remote && remote.incidentId){
+        // この端末は待機中だったが、別端末で現場が開始された。
+        incidentSession++;
+        clearRoute();clearOverlays();
+        if(fireMarker)fireMarker.setMap(null);
+        if(fireCircle)fireCircle.setMap(null);
+        fireMarker=null;fireCircle=null;
+        incident=remote;
+        renderIncident(remote);
+        waterData=[];
+        $('stats').innerHTML='';
+        $('stats').classList.add('hidden');
+        $('stats').style.display='none';
+
+        // 水利はバックグラウンド、マーカーは軽量同期。
+        loadAll(true).catch(e=>console.warn('initial shared incident load',e));
+      }
+      return;
+    }
+
     if(remote===null || remote===undefined){
-      // 他端末終了は従来の小型トーストを使わず、現場終了と同じ中央ウィンドウで通知する。
+      // 他端末終了は現場終了と同じ中央ウィンドウで通知する。
       hideToast();
       finishLocalIncident();
       showProcessing('現場を終了しました','他の端末で現場終了が反映されました');
@@ -617,8 +646,10 @@ async function syncActiveIncident(){
       incident=remote;
       renderIncident(remote);
       waterData=[];
-      $('stats').innerHTML='';$('stats').classList.add('hidden');$('stats').style.display='none';
-      refreshWaterInBackground(true,incidentSession);
+      $('stats').innerHTML='';
+      $('stats').classList.add('hidden');
+      $('stats').style.display='none';
+      loadAll(true).catch(e=>console.warn('shared incident change load',e));
     }
   }catch(e){
     console.warn('incident sync',e);
