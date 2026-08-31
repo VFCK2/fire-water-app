@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v78: マーカー追加ボタン4列＋通行止め半透明 -->
+<!-- v79: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v78</title>
+<title>消防団 現場支援マップ v79</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -215,7 +215,7 @@ body.marker-placement #map{cursor:crosshair}
 @keyframes historySpin{to{transform:rotate(360deg)}}
 .history-action-busy{opacity:.6!important;pointer-events:none}
 
-/* v78: 現場マーカー追加ボタンを4つ横一列 */
+/* v79: 現場マーカー追加ボタンを4つ横一列 */
 .marker-add-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
 .marker-add-btn{min-width:0!important;width:100%!important;min-height:60px!important;padding:5px 3px!important;font-size:24px!important}
 .marker-add-btn span{font-size:11px!important}
@@ -599,6 +599,60 @@ function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=nu
 // getInitialData は水利を返さないため、重い水利読み込みは発生しない。
 let incidentStateSyncBusy=false;
 const pendingMarkerIds=new Set();
+
+async function loadSharedIncidentWater(sessionId){
+  const targetIncident=incident;
+  if(!targetIncident)return;
+  const targetId=String(targetIncident.incidentId||'');
+  const lat=Number(targetIncident.lat),lng=Number(targetIncident.lng);
+  const radius=Number(targetIncident.radiusM||200);
+  if(!isFinite(lat)||!isFinite(lng))return;
+
+  try{
+    // 現場開始を検知した端末は、loadAllの状態に依存せず、
+    // 「現場から200m以内」の水利だけを専用APIで取得する。
+    // これにより、マーカー同期と水利取得の処理競合を避ける。
+    $('historyLoadingSub').textContent='周辺200mの水利を読み込んでいます…';
+    const latest=await api('getNearbyWater',{lat,lng,radiusM:radius},30000);
+
+    if(sessionId!==incidentSession || !incident ||
+       String(incident.incidentId||'')!==targetId)return;
+
+    if(!Array.isArray(latest))throw new Error('水利データを取得できませんでした。');
+
+    waterData=latest;
+
+    const key=lat.toFixed(5)+','+lng.toFixed(5)+','+radius;
+    nearbyWaterClientCache.set(key,latest);
+
+    Object.values(waterMarkers).forEach(m=>{
+      try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+    });
+    waterMarkers={};
+
+    waterData.forEach(addWaterMarker);
+    renderStats();
+    renderList();
+
+    startWaterStatusPolling();
+    $('historyLoadingSub').textContent='水利を読み込みました（'+waterData.length+'件）';
+  }catch(e){
+    console.warn('shared water bootstrap failed',e);
+
+    // 水利だけ失敗しても現場表示は維持。
+    // 次回の同期で再試行できるようにする。
+    if(sessionId===incidentSession && incident &&
+       String(incident.incidentId||'')===targetId){
+      setTimeout(()=>{
+        if(incident && String(incident.incidentId||'')===targetId &&
+           sessionId===incidentSession && !waterData.length){
+          loadSharedIncidentWater(sessionId);
+        }
+      },3000);
+    }
+  }
+}
+
 async function syncActiveIncident(){
   if(historyViewMode||incidentStateSyncBusy)return;
   incidentStateSyncBusy=true;
@@ -625,7 +679,7 @@ async function syncActiveIncident(){
         $('stats').style.display='none';
 
         // 水利はバックグラウンド、マーカーは軽量同期。
-        loadAll(true).catch(e=>console.warn('initial shared incident load',e));
+        loadSharedIncidentWater(incidentSession);
       }
       return;
     }
@@ -649,7 +703,7 @@ async function syncActiveIncident(){
       $('stats').innerHTML='';
       $('stats').classList.add('hidden');
       $('stats').style.display='none';
-      loadAll(true).catch(e=>console.warn('shared incident change load',e));
+      loadSharedIncidentWater(incidentSession);
     }
   }catch(e){
     console.warn('incident sync',e);
@@ -1384,7 +1438,16 @@ try{
  if(navEntry&&navEntry.type==='reload'){/* 強制更新済み */}
 }catch(e){}
 
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden){
+    if(incident){
+      loadAll(true);
+      if(!waterData.length)loadSharedIncidentWater(incidentSession);
+    }else{
+      syncActiveIncident();
+    }
+  }
+});
 loadGoogleMaps();
 </script>
 </body>
