@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v73: マーカー追加ボタン4列＋通行止め半透明 -->
+<!-- v75: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v73</title>
+<title>消防団 現場支援マップ v75</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -661,7 +661,7 @@ function syncMarkersOnly(){
 }
 
 
-async function geocodeWithRetry(address,maxTry=3){
+async function geocodeWithRetry(address,maxTry=4){
   let lastError=null;
   for(let i=0;i<maxTry;i++){
     try{
@@ -672,7 +672,7 @@ async function geocodeWithRetry(address,maxTry=3){
       lastError=e;
       if(i<maxTry-1){
         $('historyLoadingSub').textContent='住所を確認しています…（再試行 '+(i+2)+'/'+maxTry+'）';
-        await new Promise(resolve=>setTimeout(resolve,700));
+        await new Promise(resolve=>setTimeout(resolve,900));
       }
     }
   }
@@ -683,12 +683,28 @@ async function searchFire(){
   const a=$('address').value.replace(/[\u3000]/g,' ').trim();
   if(!a){focusAddress();return}
   const b=$('searchBtn');b.disabled=true;b.textContent='検索中';
-  showProcessing('現場を検索中…','住所を確認しています');
+  // startIncidentの通信だけがタイムアウトしても、GAS側で二重現場を作らないためのID。
+  const startRequestId='SR_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
+  showProcessing('現場を検索中…','住所と現場情報を確認しています');
   try{
-   const r=await geocodeWithRetry(a,3);
+   const r=await geocodeWithRetry(a,4);
    $('historyLoadingSub').textContent='現場情報を取得しています…';
-   const d=await api('startIncident',{address:r.address,lat:r.lat,lng:r.lng,radiusM:200});
-   if(!d||!d.incident)throw new Error('現場情報を取得できませんでした。');
+
+   let d=null,lastStartError=null;
+   for(let attempt=0;attempt<2;attempt++){
+     try{
+       d=await api('startIncident',{address:r.address,lat:r.lat,lng:r.lng,radiusM:200,requestId:startRequestId},30000);
+       if(d&&d.incident)break;
+       throw new Error('現場情報を取得できませんでした。');
+     }catch(e){
+       lastStartError=e;
+       if(attempt===0){
+         $('historyLoadingSub').textContent='現場情報を確認しています…（再試行 2/2）';
+         await new Promise(resolve=>setTimeout(resolve,1200));
+       }
+     }
+   }
+   if(!d||!d.incident)throw lastStartError||new Error('現場情報を取得できませんでした。');
    incidentSession++;incident=d.incident;jurisdictionData=d.jurisdiction||jurisdictionData;
    clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
    $('headerSub').textContent=incident.address;
