@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v75: マーカー追加ボタン4列＋通行止め半透明 -->
+<!-- v76: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v75</title>
+<title>消防団 現場支援マップ v76</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -214,6 +214,17 @@ body.marker-placement #map{cursor:crosshair}
 .history-loading-card.done .history-spinner,.history-loading-card.error .history-spinner{display:none}.history-loading-card.done .history-loading-title::before{content:''}.history-loading-card.error .history-loading-title::before{content:'! ';font-size:22px}
 @keyframes historySpin{to{transform:rotate(360deg)}}
 .history-action-busy{opacity:.6!important;pointer-events:none}
+
+/* v76: 現場マーカー追加ボタンを4つ横一列 */
+.marker-add-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+.marker-add-btn{min-width:0!important;width:100%!important;min-height:60px!important;padding:5px 3px!important;font-size:24px!important}
+.marker-add-btn span{font-size:11px!important}
+@media(max-width:699px){
+ .marker-add-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}
+ .marker-add-btn{min-height:62px!important;font-size:23px!important}
+ .marker-add-btn span{font-size:10px!important}
+}
+
 </style>
 </head>
 <body>
@@ -939,23 +950,33 @@ function setWaterMarkersClickable(enabled){
  Object.values(overlayMarkers).forEach(m=>{try{if(m&&typeof m.setClickable==='function')m.setClickable(enabled)}catch(e){}});
 }
 function setPlacementMode(enabled){
- document.body.classList.toggle('marker-placement',enabled);
- if(enabled){
-  // Mobile Safari/Google Maps can still eat taps on marker hit areas even when clickable=false.
-  // Temporarily remove water markers from the map so the user's tap always reaches the map.
-  Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
-  setWaterMarkersClickable(false);
-  try{if(routeLayer){
-    if(Array.isArray(routeLayer))routeLayer.forEach(x=>x.setOptions?.({clickable:false}));
-    else routeLayer.setOptions?.({clickable:false});
-  }}catch(e){}
- }else{
-  Object.entries(waterMarkers).forEach(([id,m])=>{
-   try{m.setMap(map)}catch(e){}
-  });
-  setWaterMarkersClickable(true);
- }
+  document.body.classList.toggle('marker-placement',enabled);
+  if(enabled){
+   // 配置中は水利・既存マーカー・通行止め線が地図タップを奪わないようにする。
+   Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
+   Object.values(overlayMarkers).forEach(m=>{
+     try{
+       if(m&&typeof m.setClickable==='function')m.setClickable(false);
+       if(m&&typeof m.getPath==='function')m.setMap(null);
+     }catch(e){}
+   });
+   setWaterMarkersClickable(false);
+   try{if(routeLayer){
+     if(Array.isArray(routeLayer))routeLayer.forEach(x=>x.setOptions?.({clickable:false}));
+     else routeLayer.setOptions?.({clickable:false});
+   }}catch(e){}
+  }else{
+   Object.values(waterMarkers).forEach(m=>{try{m.setMap(map)}catch(e){}});
+   Object.values(overlayMarkers).forEach(m=>{
+     try{
+       if(m&&typeof m.getPath==='function')m.setMap(map);
+       if(m&&typeof m.setClickable==='function')m.setClickable(true);
+     }catch(e){}
+   });
+   setWaterMarkersClickable(true);
+  }
 }
+
 function startAdd(mode){
  if(!incident){alert('先に火災住所を検索してください。');return}
  closeAllSheets();
@@ -1078,7 +1099,7 @@ function onMapClick(e){
    path:tempRoad,
    strokeColor:'#ff3b30',
    strokeWeight:10,
-   strokeOpacity:.58,
+   strokeOpacity:0.58,
    clickable:false,
    zIndex:900
   });
@@ -1158,7 +1179,7 @@ function addIncidentMarker(m){
    path,
    strokeColor:'#ff3b30',
    strokeWeight:12,
-   strokeOpacity:.95,
+   strokeOpacity:0.58,
    clickable:!addingMode,
    zIndex:900
   });
