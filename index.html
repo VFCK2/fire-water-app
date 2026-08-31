@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v76: マーカー追加ボタン4列＋通行止め半透明 -->
+<!-- v77: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v76</title>
+<title>消防団 現場支援マップ v77</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -215,7 +215,7 @@ body.marker-placement #map{cursor:crosshair}
 @keyframes historySpin{to{transform:rotate(360deg)}}
 .history-action-busy{opacity:.6!important;pointer-events:none}
 
-/* v76: 現場マーカー追加ボタンを4つ横一列 */
+/* v77: 現場マーカー追加ボタンを4つ横一列 */
 .marker-add-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
 .marker-add-btn{min-width:0!important;width:100%!important;min-height:60px!important;padding:5px 3px!important;font-size:24px!important}
 .marker-add-btn span{font-size:11px!important}
@@ -391,6 +391,7 @@ function failProcessing(title='処理に失敗しました',sub='もう一度お
 
 let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
 let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
+const locallyDeletedMarkerIds=new Set();
 let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false,incidentSession=0;
 let waterStatusTimer=null,waterStatusBusy=false,waterStatusSeq=0;
 let historyViewMode=false;
@@ -650,9 +651,14 @@ function syncMarkersOnly(){
   api('getActiveMarkers').then(markers=>{
     const list=Array.isArray(markers)?markers:[];
     const ids=new Set(list.map(m=>String(m.markerId)));
+    // サーバーから削除済みと確認できたIDだけ保護を解除。
+    locallyDeletedMarkerIds.forEach(id=>{
+      if(!ids.has(id))locallyDeletedMarkerIds.delete(id);
+    });
+
     Object.keys(overlayMarkers).forEach(id=>{
-      // 自端末で登録直後の仮マーカーは、GAS保存完了まで同期で消さない。
-      if(pendingMarkerIds.has(String(id)))return;
+      // 登録直後・削除直後は古い同期結果で表示を戻さない。
+      if(pendingMarkerIds.has(String(id))||locallyDeletedMarkerIds.has(String(id)))return;
       if(!ids.has(String(id))){
         try{overlayMarkers[id].setMap(null)}catch(e){}
         delete overlayMarkers[id];
@@ -660,6 +666,7 @@ function syncMarkersOnly(){
     });
     list.forEach(m=>{
       const id=String(m.markerId);
+      if(locallyDeletedMarkerIds.has(id))return;
       const existing=overlayMarkers[id];
       if(!existing){addIncidentMarker(m);return;}
       if(m.type==='guard'&&typeof existing.setPosition==='function'){
@@ -881,8 +888,13 @@ async function loadAll(silent=false){
         const list=Array.isArray(markers)?markers:[];
         const ids=new Set(list.map(m=>String(m.markerId)));
 
+        locallyDeletedMarkerIds.forEach(id=>{
+          if(!ids.has(id))locallyDeletedMarkerIds.delete(id);
+        });
+
         Object.keys(overlayMarkers).forEach(id=>{
           if(id==='TEMP_ROAD')return;
+          if(locallyDeletedMarkerIds.has(String(id)))return;
           if(!ids.has(String(id))){
             try{overlayMarkers[id].setMap(null)}catch(e){}
             delete overlayMarkers[id];
@@ -891,6 +903,7 @@ async function loadAll(silent=false){
 
         list.forEach(m=>{
           const id=String(m.markerId);
+          if(locallyDeletedMarkerIds.has(id))return;
           const existing=overlayMarkers[id];
           if(!existing){addIncidentMarker(m);return;}
           if(m.type==='guard'&&typeof existing.setPosition==='function'){
@@ -1246,6 +1259,7 @@ async function removeSelectedMarker(){
   if(!selectedMarker)return;
   if(!confirm('このマーカーを削除しますか？'))return;
   const markerId=selectedMarker.markerId;
+  locallyDeletedMarkerIds.add(String(markerId));
   showProcessing('マーカーを削除中…','サーバーから削除しています');
   try{
     const result=await api('deleteMarker',{markerId});
@@ -1263,6 +1277,7 @@ async function removeSelectedMarker(){
     closeSheet('markerSheet');
     finishProcessing('削除しました','マーカーを削除しました',650);
   }catch(e){
+    locallyDeletedMarkerIds.delete(String(markerId));
     failProcessing('削除に失敗しました',e.message||'もう一度お試しください',1300);
   }
 }
