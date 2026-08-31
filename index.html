@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v66</title>
+<title>消防団 現場支援マップ v67</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -326,7 +326,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v66 */
+/* Google Maps version v67 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -648,20 +648,46 @@ function syncMarkersOnly(){
 }
 
 
+async function geocodeWithRetry(address,maxTry=3){
+  let lastError=null;
+  for(let i=0;i<maxTry;i++){
+    try{
+      const r=await api('geocodeAddress',{address});
+      if(r&&isFinite(Number(r.lat))&&isFinite(Number(r.lng)))return r;
+      throw new Error('住所を特定できませんでした。');
+    }catch(e){
+      lastError=e;
+      if(i<maxTry-1){
+        $('historyLoadingSub').textContent='住所を確認しています…（再試行 '+(i+2)+'/'+maxTry+'）';
+        await new Promise(resolve=>setTimeout(resolve,700));
+      }
+    }
+  }
+  throw lastError||new Error('住所を検索できませんでした。');
+}
+
 async function searchFire(){
- const a=$('address').value.trim();if(!a){focusAddress();return}
- const b=$('searchBtn');b.disabled=true;b.textContent='検索中';
- showProcessing('現場を検索中…','住所と周辺の水利を取得しています');
- try{
-  const r=await api('geocodeAddress',{address:a});
-  const d=await api('startIncident',{address:r.address,lat:r.lat,lng:r.lng,radiusM:200});
-  incidentSession++;incident=d.incident;jurisdictionData=d.jurisdiction||jurisdictionData;
-  clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
-  $('headerSub').textContent=incident.address;
-  $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
-  waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
-  startSharedPolling();startWaterStatusPolling();finishProcessing('現場を開始しました','周辺の水利を表示しています',700);
- }catch(e){failProcessing('現場の開始に失敗しました',e.message||'もう一度お試しください',1500)}finally{b.disabled=false;b.textContent='検索'}
+  const a=$('address').value.replace(/[\u3000]/g,' ').trim();
+  if(!a){focusAddress();return}
+  const b=$('searchBtn');b.disabled=true;b.textContent='検索中';
+  showProcessing('現場を検索中…','住所を確認しています');
+  try{
+   const r=await geocodeWithRetry(a,3);
+   $('historyLoadingSub').textContent='現場情報を取得しています…';
+   const d=await api('startIncident',{address:r.address,lat:r.lat,lng:r.lng,radiusM:200});
+   if(!d||!d.incident)throw new Error('現場情報を取得できませんでした。');
+   incidentSession++;incident=d.incident;jurisdictionData=d.jurisdiction||jurisdictionData;
+   clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
+   $('headerSub').textContent=incident.address;
+   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
+   waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
+   startSharedPolling();startWaterStatusPolling();
+   finishProcessing('現場を開始しました','周辺の水利を表示しています',700);
+  }catch(e){
+   failProcessing('現場の開始に失敗しました',e.message||'もう一度お試しください',1500);
+  }finally{
+   b.disabled=false;b.textContent='検索';
+  }
 }
 
 function clearOverlays(){
