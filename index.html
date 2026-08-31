@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v63: processing modal completion fix -->
+<!-- v71: 警備マーカーを緑丸＋白文字A/B/Cの「警備地点」表示へ変更 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v68</title>
+<title>消防団 現場支援マップ v71</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -54,13 +54,14 @@ body.marker-placement #map{cursor:crosshair}
 .marker-placement .marker-placement-mask::after{content:'＋';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border:2px solid rgba(255,59,48,.8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ff3b30;font-size:28px;font-weight:900;background:rgba(255,255,255,.12)}
 @media(max-width:699px){.marker-placement .marker-placement-mask::after{width:40px;height:40px;font-size:25px}}
 .marker-add-btn{touch-action:manipulation}
+ .guard-add-circle{width:38px;height:38px;border-radius:50%;background:#18a957;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;line-height:1;}
 
 @media(min-width:700px){.topbar{left:24px;right:auto;width:560px}.sheet{left:24px;right:auto;width:420px}.stats{left:24px;right:24px}.legend{left:24px}}
 @media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px);left:8px;right:8px}.topcard{padding:7px 8px}.stats{bottom:calc(env(safe-area-inset-bottom) + 62px)}#toast{bottom:calc(env(safe-area-inset-bottom) + 105px)}.incident-title{gap:5px}}
 
 /* v21 mobile readability */
 .topbar{z-index:1400}.topcard{border-radius:12px}.searchbar .input{height:40px;font-size:16px}.searchbar .btn{height:40px;font-size:15px;padding:0 16px}.address-display{font-size:15px;line-height:1.3}.incident-title{min-height:36px}.chip{font-size:13px;padding:8px 10px}.chip b{font-size:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 66px);gap:6px}.chip{box-shadow:0 3px 12px rgba(0,0,0,.18)}
-.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:9px 10px}.route-main{font-size:28px;line-height:1.1}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:10px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{grid-template-columns:1fr}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.96);border-radius:12px;padding:7px 12px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:17px;font-weight:900;color:#14548a;white-space:nowrap}.route-summary.hidden{display:none}
+.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:9px 10px}.route-main{font-size:28px;line-height:1.1}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:10px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{grid-template-columns:1fr}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.96);border-radius:12px;padding:7px 12px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:17px;font-weight:900;color:#14548a;white-space:nowrap}.route-summary.hidden{display:none}
 @media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px)}#mapControls{top:calc(env(safe-area-inset-top) + 118px);right:8px;z-index:1600}.fab{width:50px;height:50px;font-size:24px;border-radius:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 70px)}}
 
 .history-sheet{max-height:65dvh}
@@ -266,7 +267,9 @@ body.marker-placement #map{cursor:crosshair}
   <div><div id="markerTitle" class="sheet-title"></div><div id="markerBody" class="distance"></div></div>
   <button class="close" onclick="closeSheet('markerSheet')">×</button>
  </div>
- <div class="actiongrid" style="grid-template-columns:1fr">
+ <div id="guardMoveHint" class="mode hidden">移動モード：新しい配置場所をタップしてください</div>
+ <div class="actiongrid" style="grid-template-columns:1fr 1fr">
+  <button id="moveMarkerBtn" class="btn btn-light hidden" onclick="startMoveSelectedMarker()">移動</button>
   <button class="btn btn-red" onclick="removeSelectedMarker()">削除</button>
  </div>
 </div>
@@ -285,6 +288,7 @@ body.marker-placement #map{cursor:crosshair}
  <div class="marker-add-grid">
   <button class="marker-add-btn" onclick="startAdd('truck')">🚒<span>消防車</span></button>
   <button class="marker-add-btn" onclick="startAdd('loader')">🚚<span>積載車</span></button>
+  <button class="marker-add-btn" onclick="startAdd('guard')"><span class="guard-add-circle">A</span><span>警備地点</span></button>
   <button class="marker-add-btn road" onclick="startAdd('road')">⛔<span>通行止め</span></button>
  </div>
 </div>
@@ -326,7 +330,7 @@ body.marker-placement #map{cursor:crosshair}
 </div>
 
 <script>
-/* Google Maps version v68 */
+/* Google Maps version v69 */
 const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
 const GOOGLE_MAPS_BROWSER_KEY='AIzaSyA4Q88SGAzxJhRt641KoSK11rTjiizDW54';
 
@@ -934,6 +938,9 @@ function startAdd(mode){
   tempRoad=[]; if(tempLine){tempLine.setMap(null);tempLine=null;}
   $('markerMode').textContent='⛔ 道路を2点以上タップ → 登録';
   $('drawSheet').classList.remove('hidden');
+ }else if(mode==='guard'){
+  $('markerMode').textContent='🟢 警備地点を1回タップ';
+  showToast('警備を配置する地点をタップ');
  }else{
   $('markerMode').textContent=mode==='loader'?'🚚 地図を1回タップ':'🚒 地図を1回タップ';
   showToast(mode==='loader'?'積載車の位置をタップ':'消防車の位置をタップ');
@@ -950,6 +957,38 @@ function cancelMarkerMode(){
 function onMapClick(e){
  if(!addingMode)return;
  const lat=e.latLng.lat(),lng=e.latLng.lng();
+
+ // 警備員の移動：移動ボタンを押した後だけ有効。タップしただけでは動かない。
+ if(addingMode==='guardMove'){
+  if(!selectedMarker)return;
+  const target=selectedMarker;
+  if(!confirm((target.name||'警備')+'をこの場所へ移動しますか？'))return;
+  const marker=overlayMarkers[target.markerId];
+  showProcessing('警備地点を移動中…','新しい配置場所を保存しています');
+  addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);
+  api('updateMarker',{markerId:target.markerId,lat,lng}).then(m=>{
+    if(!m)throw new Error('移動結果を取得できませんでした。');
+    target.lat=Number(m.lat??lat);target.lng=Number(m.lng??lng);
+    if(marker&&typeof marker.setPosition==='function')marker.setPosition({lat:target.lat,lng:target.lng});
+    selectedMarker=target;
+    finishProcessing('移動しました',(target.name||'A')+'地点を新しい場所へ移動しました',650);
+  }).catch(err=>{
+    failProcessing('移動に失敗しました',err.message||'もう一度お試しください',1300);
+  });
+  return;
+ }
+
+ // 警備員の新規配置
+ if(addingMode==='guard'){
+  addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);
+  showProcessing('警備地点を保存中…','配置場所をサーバーへ保存しています');
+  api('addGuardMarker',{lat,lng}).then(m=>{
+    if(!m||!m.markerId)throw new Error('警備マーカーを保存できませんでした。');
+    addIncidentMarker(m);
+    finishProcessing('登録しました',m.name+'地点を配置しました',650);
+  }).catch(err=>failProcessing('保存に失敗しました',err.message||'もう一度お試しください',1300));
+  return;
+ }
 
  // 消防車・積載車
  // 仮マーカーを先に表示し、保存完了後も「同じマーカー」をそのまま使う。
@@ -1099,6 +1138,16 @@ function addIncidentMarker(m){
    if(!addingMode)showMarkerInfo(m);
   });
   overlayMarkers[m.markerId]=line;
+ }else if(m.type==='guard'){
+  const label=String(m.name||'A');
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 58 58">
+    <circle cx="29" cy="29" r="26" fill="#18a957" stroke="#fff" stroke-width="3"/>
+    <text x="29" y="38" text-anchor="middle" font-size="24" font-weight="900" fill="#fff" font-family="Arial,sans-serif">${label}</text>
+  </svg>`;
+  const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:label,icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(58,58),anchor:new google.maps.Point(29,29)}});
+  marker.setClickable(!addingMode);
+  marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});
+  overlayMarkers[m.markerId]=marker;
  }else{
   // 車両はGoogle Maps標準ピンを使わず、色付き円＋車両アイコンで表示。
   // 消火栓・防火水槽にはこの処理は適用しない。
@@ -1125,7 +1174,22 @@ function addIncidentMarker(m){
   overlayMarkers[m.markerId]=marker;
  }
 }
-function showMarkerInfo(m){selectedMarker=m;$('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':'⛔ ')+(m.name||'');$('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':'通行止め区間';$('markerSheet').classList.remove('hidden')}
+function showMarkerInfo(m){
+ selectedMarker=m;
+ const isGuard=m.type==='guard';
+ $('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':isGuard?'🟢 ':'⛔ ')+(isGuard?((m.name||'A')+'地点'):(m.name||''));
+ $('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':isGuard?'警備配置地点':'通行止め区間';
+ const move=$('moveMarkerBtn');if(move)move.classList.toggle('hidden',!isGuard);
+ $('markerSheet').classList.remove('hidden');
+}
+function startMoveSelectedMarker(){
+ if(!selectedMarker||selectedMarker.type!=='guard')return;
+ closeSheet('markerSheet');
+ addingMode='guardMove';
+ $('markerMode').style.display='block';
+ $('markerMode').textContent='🟢 '+(selectedMarker.name||'A')+'地点の移動先をタップ';
+ setPlacementMode(true);
+}
 async function removeSelectedMarker(){
   if(!selectedMarker)return;
   if(!confirm('このマーカーを削除しますか？'))return;
