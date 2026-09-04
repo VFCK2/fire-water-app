@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v79: マーカー追加ボタン4列＋通行止め半透明 -->
+<!-- v78: マーカー追加ボタン4列＋通行止め半透明 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>消防団 現場支援マップ v79</title>
+<title>消防団 現場支援マップ v82</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -215,7 +215,7 @@ body.marker-placement #map{cursor:crosshair}
 @keyframes historySpin{to{transform:rotate(360deg)}}
 .history-action-busy{opacity:.6!important;pointer-events:none}
 
-/* v79: 現場マーカー追加ボタンを4つ横一列 */
+/* v78: 現場マーカー追加ボタンを4つ横一列 */
 .marker-add-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
 .marker-add-btn{min-width:0!important;width:100%!important;min-height:60px!important;padding:5px 3px!important;font-size:24px!important}
 .marker-add-btn span{font-size:11px!important}
@@ -396,6 +396,8 @@ let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,last
 let waterStatusTimer=null,waterStatusBusy=false,waterStatusSeq=0;
 let historyViewMode=false;
 let nearbyWaterClientCache=new Map();
+// 保存中の水利は、バックグラウンド同期で古い状態に戻さない。
+const pendingWaterSaves=new Map();
 const defaultCenter={lat:35.5572,lng:139.7330};
 const $=id=>document.getElementById(id);
 function showIncidentBadge(){}
@@ -599,60 +601,6 @@ function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=nu
 // getInitialData は水利を返さないため、重い水利読み込みは発生しない。
 let incidentStateSyncBusy=false;
 const pendingMarkerIds=new Set();
-
-async function loadSharedIncidentWater(sessionId){
-  const targetIncident=incident;
-  if(!targetIncident)return;
-  const targetId=String(targetIncident.incidentId||'');
-  const lat=Number(targetIncident.lat),lng=Number(targetIncident.lng);
-  const radius=Number(targetIncident.radiusM||200);
-  if(!isFinite(lat)||!isFinite(lng))return;
-
-  try{
-    // 現場開始を検知した端末は、loadAllの状態に依存せず、
-    // 「現場から200m以内」の水利だけを専用APIで取得する。
-    // これにより、マーカー同期と水利取得の処理競合を避ける。
-    $('historyLoadingSub').textContent='周辺200mの水利を読み込んでいます…';
-    const latest=await api('getNearbyWater',{lat,lng,radiusM:radius},30000);
-
-    if(sessionId!==incidentSession || !incident ||
-       String(incident.incidentId||'')!==targetId)return;
-
-    if(!Array.isArray(latest))throw new Error('水利データを取得できませんでした。');
-
-    waterData=latest;
-
-    const key=lat.toFixed(5)+','+lng.toFixed(5)+','+radius;
-    nearbyWaterClientCache.set(key,latest);
-
-    Object.values(waterMarkers).forEach(m=>{
-      try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
-    });
-    waterMarkers={};
-
-    waterData.forEach(addWaterMarker);
-    renderStats();
-    renderList();
-
-    startWaterStatusPolling();
-    $('historyLoadingSub').textContent='水利を読み込みました（'+waterData.length+'件）';
-  }catch(e){
-    console.warn('shared water bootstrap failed',e);
-
-    // 水利だけ失敗しても現場表示は維持。
-    // 次回の同期で再試行できるようにする。
-    if(sessionId===incidentSession && incident &&
-       String(incident.incidentId||'')===targetId){
-      setTimeout(()=>{
-        if(incident && String(incident.incidentId||'')===targetId &&
-           sessionId===incidentSession && !waterData.length){
-          loadSharedIncidentWater(sessionId);
-        }
-      },3000);
-    }
-  }
-}
-
 async function syncActiveIncident(){
   if(historyViewMode||incidentStateSyncBusy)return;
   incidentStateSyncBusy=true;
@@ -679,7 +627,7 @@ async function syncActiveIncident(){
         $('stats').style.display='none';
 
         // 水利はバックグラウンド、マーカーは軽量同期。
-        loadSharedIncidentWater(incidentSession);
+        loadAll(true).catch(e=>console.warn('initial shared incident load',e));
       }
       return;
     }
@@ -703,7 +651,7 @@ async function syncActiveIncident(){
       $('stats').innerHTML='';
       $('stats').classList.add('hidden');
       $('stats').style.display='none';
-      loadSharedIncidentWater(incidentSession);
+      loadAll(true).catch(e=>console.warn('shared incident change load',e));
     }
   }catch(e){
     console.warn('incident sync',e);
@@ -894,6 +842,11 @@ async function refreshWaterInBackground(silent=true, session=incidentSession){
     const latest=await api('getNearbyWater',{lat,lng,radiusM:radius});
     if(session!==incidentSession||!incident||incident!==currentIncident)return;
     if(Array.isArray(latest)){
+      // 保存中の水利はサーバー側の古い状態で上書きしない。
+      latest.forEach(w=>{
+        const pending=pendingWaterSaves.get(String(w.id));
+        if(pending)w.status=pending.status;
+      });
       waterData=latest;
       nearbyWaterClientCache.set(Number(lat).toFixed(5)+','+Number(lng).toFixed(5)+','+Number(radius),latest);
       Object.values(waterMarkers).forEach(m=>{try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}});
@@ -922,6 +875,8 @@ async function syncWaterStatusesOnly(){
     let changed=false;
     waterData.forEach(w=>{
       const id=String(w.id);
+      // 自端末で保存中の水利は、古いポーリング結果で戻さない。
+      if(pendingWaterSaves.has(id))return;
       if(!Object.prototype.hasOwnProperty.call(states,id))return;
       const next=String(states[id]||'未確認');
       if(w.status!==next){w.status=next;changed=true;}
@@ -1013,6 +968,14 @@ async function loadAll(silent=false){
 }
 
 function addWaterMarkerRefresh(w){if(waterMarkers[w.id])waterMarkers[w.id].setMap(null);addWaterMarker(w)}
+function updateWaterClientCacheStatus(waterId,status){
+  const id=String(waterId);
+  nearbyWaterClientCache.forEach(arr=>{
+    if(!Array.isArray(arr))return;
+    const hit=arr.find(w=>String(w.id)===id);
+    if(hit)hit.status=status;
+  });
+}
 function showWater(w){
  selectedWater=w;
  $('waterTitle').textContent=(String(w.type).indexOf('防火水槽')>=0?'⭐ ':'● ')+w.type;
@@ -1022,7 +985,56 @@ function showWater(w){
  calculateRouteToWater(w);
 }
 function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=historyViewMode)}
-async function setWater(status){if(!selectedWater)return;const water=selectedWater;const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];buttons.forEach(b=>b.disabled=true);water.status=status;renderWaterStatus();addWaterMarkerRefresh(water);renderStats();renderList();showProcessing('水利情報を保存中…','状態をサーバーへ保存しています');try{await api('saveWaterStatus',{waterId:water.id,status});finishProcessing('保存しました',status+' に更新しました',650)}catch(e){failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);try{await loadAll(true)}catch(ignore){}}finally{buttons.forEach(b=>b.disabled=false)}}
+async function setWater(status){
+  if(!selectedWater||historyViewMode)return;
+  const water=selectedWater;
+  const id=String(water.id);
+  const previousStatus=String(water.status||'未確認');
+  if(previousStatus===String(status))return;
+  const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];
+  buttons.forEach(b=>b.disabled=true);
+
+  // 画面は先に更新。保存完了を待たず、現場では即時反映して見せる。
+  water.status=String(status);
+  pendingWaterSaves.set(id,{status:String(status),previousStatus});
+  updateWaterClientCacheStatus(id,String(status));
+  renderWaterStatus();
+  addWaterMarkerRefresh(water);
+  renderStats();
+  renderList();
+
+  // 速い保存では処理ウィンドウを一瞬も出さない。
+  // 350msを超えた時だけ「保存中」を表示する。
+  let processingShown=false;
+  let slowTimer=setTimeout(()=>{
+    if(pendingWaterSaves.has(id)){
+      processingShown=true;
+      showProcessing('水利情報を保存中…','状態をサーバーへ保存しています');
+    }
+  },350);
+  // showProcessingが呼ばれたかをDOM状態から判定する。
+  try{
+    const result=await api('saveWaterStatus',{waterId:id,status:String(status)});
+    clearTimeout(slowTimer);
+    pendingWaterSaves.delete(id);
+    updateWaterClientCacheStatus(id,String(status));
+    if(typeof result==='object' && result && result.saved===false)throw new Error('保存できませんでした。');
+    if(processingShown)finishProcessing('保存しました',String(status)+' に更新しました',450);
+  }catch(e){
+    clearTimeout(slowTimer);
+    pendingWaterSaves.delete(id);
+    // 保存失敗時だけ元の状態へ戻す。
+    water.status=previousStatus;
+    updateWaterClientCacheStatus(id,previousStatus);
+    renderWaterStatus();
+    addWaterMarkerRefresh(water);
+    renderStats();
+    renderList();
+    failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);
+  }finally{
+    buttons.forEach(b=>b.disabled=historyViewMode);
+  }
+}
 
 function renderStats(){
   const s={all:waterData.length,unknown:waterData.filter(w=>w.status==='未確認').length,ok:waterData.filter(w=>w.status==='使用可能').length,busy:waterData.filter(w=>w.status==='消防署使用中').length,bad:waterData.filter(w=>w.status==='使用困難').length};
@@ -1438,16 +1450,7 @@ try{
  if(navEntry&&navEntry.type==='reload'){/* 強制更新済み */}
 }catch(e){}
 
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden){
-    if(incident){
-      loadAll(true);
-      if(!waterData.length)loadSharedIncidentWater(incidentSession);
-    }else{
-      syncActiveIncident();
-    }
-  }
-});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
 loadGoogleMaps();
 </script>
 </body>
