@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>sui-Ri PWA</title>
+<title>sui-Ri PWA2</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -235,6 +235,19 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 </style>
+
+  <meta name="theme-color" content="#1976d2">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="sui-Ri">
+  <link rel="manifest" href="manifest.json">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+
 </head>
 <body>
 <div id="app">
@@ -1550,5 +1563,15 @@ try{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
 loadGoogleMaps();
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {scope: './'})
+      .catch(err => console.warn('Service Worker registration failed:', err));
+  });
+}
+</script>
+
 </body>
 </html>
