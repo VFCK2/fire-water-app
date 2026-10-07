@@ -1,17 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v91: v88ベース。アプリ内に直接「↻ 更新」を追加 -->
+<!-- v91: v88引き継ぎ版。現場を維持したまま最新情報を手動更新 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sui-Ri">
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icons/icon-180.png">
-<title>Sui-Ri 水利アプリ v91</title>
+<meta name="theme-color" content="#111315">
+<title>sui-Ri test</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -447,27 +441,25 @@ async function refreshNow(){
     return;
   }
 
-  showProcessing('最新情報を更新中…','水利・マーカーの最新状態を取得しています');
+  showProcessing('最新情報を更新中…','水利・現場マーカーの最新状態を取得しています');
 
   try{
-    // v88の既存同期処理をそのまま利用。
-    // 現場・200m範囲・現在の表示状態は維持し、データだけ再取得する。
+    // 現在の現場・200m範囲・地図位置・配置済みマーカー等はそのまま維持。
+    // loadAll() は既存の同期処理を利用し、水利取得だけ完了まで待つ。
     await loadAll(true);
 
-    // loadAll() の水利取得はバックグラウンドなので、完了まで待つ。
-    const started=Date.now();
-    while(waterSyncBusy && Date.now()-started<20000){
+    const startedAt=Date.now();
+    while(waterSyncBusy && Date.now()-startedAt<20000){
       await new Promise(resolve=>setTimeout(resolve,100));
     }
 
     if(waterSyncBusy){
-      failProcessing('更新がまだ続いています','しばらくすると最新状態が表示されます',1300);
-      return;
+      throw new Error('水利情報の更新がまだ完了していません。');
     }
 
     finishProcessing('更新しました','最新情報を取得しました',650);
   }catch(e){
-    failProcessing('更新に失敗しました',e.message||'もう一度お試しください');
+    failProcessing('更新に失敗しました',e.message||'もう一度お試しください',1300);
   }
 }
 
@@ -1557,14 +1549,6 @@ try{
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
 loadGoogleMaps();
-
-// PWA: ホーム画面から起動した場合も最新のアプリ資産を利用
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js', {scope: './'})
-      .catch(err => console.warn('PWA service worker registration failed:', err));
-  });
-}
 </script>
 </body>
 </html>
