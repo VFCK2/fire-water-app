@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!-- v91: v88ベース。アプリ内に直接「↻ 更新」を追加 -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sui-Ri">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<title>Sui-Ri 水利アプリ v91</title>
+<style>
+:root{
+ --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
+ --muted:#6b7077;--line:#e3e5e8;--red:#ff3b30;--blue:#007aff;
+ --green:#18a957;--orange:#1677ff;--yellow:#d99a00;
+ --shadow:0 8px 28px rgba(0,0,0,.16)
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif}
+button,input,select{font:inherit}
+button{border:0;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.hidden{display:none!important}
+#app,#map{width:100%;height:100dvh}
+
+.topbar{position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:10px;right:10px;z-index:1100;pointer-events:none}
+.topcard{pointer-events:auto;background:var(--panel);border-radius:15px;padding:7px 9px;box-shadow:var(--shadow);backdrop-filter:blur(16px);border:1px solid rgba(0,0,0,.06)}
+.title{font-weight:900;font-size:16px}.subtitle{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.incident-title{display:flex;align-items:center;gap:6px}.searchbar{display:flex;align-items:center;gap:5px}.searchbar input{min-width:0;flex:1}
+.input{background:#f0f1f3;border:1px solid #d9dce0;border-radius:9px;padding:7px 9px;outline:none;height:34px;font-size:13px}.input:focus{border-color:#8ebeff;background:#fff}
+.btn{border-radius:9px;padding:8px 10px;font-weight:850;white-space:nowrap}.btn-primary{background:#111315;color:#fff}.btn-light{background:#eceef0;color:#15171a}
+.btn-red{background:var(--red);color:#fff}.btn-green{background:#dff7e8;color:#087b3d}.btn-orange{background:#e8f1ff;color:#075fb8}.btn-yellow{background:#fff7d6;color:#8a6800}.btn-blue{background:#e5f0ff;color:#0063d4}
+.coverage-note{font-size:10px;color:var(--muted);line-height:1.3}.address-display{font-size:12px;font-weight:800;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+#mapControls{position:absolute;right:10px;top:calc(env(safe-area-inset-top) + 92px);z-index:1050;display:flex;flex-direction:column;gap:7px}
+.fab{width:42px;height:42px;border-radius:13px;background:var(--panel);box-shadow:var(--shadow);font-size:19px}.fab:active{transform:scale(.96)}
+.legend{position:absolute;left:10px;top:calc(env(safe-area-inset-top) + 96px);z-index:1000;background:rgba(255,255,255,.9);border-radius:10px;padding:5px 7px;font-size:9px;line-height:1.5;box-shadow:0 4px 15px rgba(0,0,0,.12)}
+.stats{position:absolute;left:7px;right:7px;bottom:calc(env(safe-area-inset-bottom) + 9px);z-index:1100;display:flex;gap:5px;overflow-x:auto;padding:2px}
+.chip{background:var(--panel);border:1px solid rgba(0,0,0,.07);box-shadow:var(--shadow);border-radius:12px;padding:7px 9px;white-space:nowrap;font-size:11px;font-weight:850}.chip b{font-size:13px;margin-left:3px}
+.sheet{position:absolute;left:9px;right:9px;bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:1300;background:var(--panel);border-radius:18px;padding:8px 10px 10px;box-shadow:0 14px 45px rgba(0,0,0,.25);backdrop-filter:blur(18px);max-height:36dvh;overflow:auto}
+.grab{width:34px;height:3px;border-radius:5px;background:#c8cbd0;margin:0 auto 7px}.sheet-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.sheet-title{font-size:16px;font-weight:900}.close{width:30px;height:30px;border-radius:50%;background:#eceef0;font-size:16px}
+.distance{font-size:11px;color:var(--muted);margin-top:2px}.statusline{margin-top:6px;padding:7px 8px;border-radius:10px;background:#f2f3f5;font-size:12px;font-weight:800}
+.actiongrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.actiongrid button{min-height:36px;padding:6px 5px;font-size:11px}
+.route-card{margin-top:8px;padding:11px 12px;border-radius:14px;background:linear-gradient(135deg,#eef7ff,#e9f3ff);color:#164f86;font-size:12px;font-weight:850;line-height:1.3;border:1px solid rgba(20,84,138,.06)}.route-card-title{font-size:14px;font-weight:950;color:#15518b;display:flex;align-items:center;gap:6px;margin-bottom:6px}.route-card-body{display:grid;grid-template-columns:minmax(118px,.82fr) 1.18fr;align-items:center;gap:10px}.route-distance-box{min-width:0;border-right:2px solid rgba(20,84,138,.16);padding:2px 10px 2px 0}.route-distance-label{font-size:12px;font-weight:900;color:#15518b}.route-main{font-size:48px;line-height:.95;font-weight:950;letter-spacing:-1.5px;color:#101820;white-space:nowrap}.route-hose-box{min-width:0;font-size:15px;font-weight:900;color:#164f86}.route-hose-icon{font-size:20px;margin-right:4px}.route-hose-count{font-size:15px;line-height:1.35}.route-note{font-size:9px;color:#66727e;margin-top:6px;line-height:1.25}.route-warning{font-size:9px;color:#8a4b00;margin-top:3px}.hose-row{display:flex;align-items:center;justify-content:space-between;margin-top:5px;padding:4px 2px;font-size:11px;color:var(--muted);font-weight:800}.hose-row select{border:1px solid #d9dce0;border-radius:8px;padding:5px 7px;background:#fff;font-weight:800;font-size:11px}
+.list-item{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}.dot{width:11px;height:11px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}.list-main{min-width:0;flex:1}.list-name{font-weight:850;font-size:12px}.list-sub{font-size:10px;color:var(--muted);margin-top:1px}.list-status{font-size:10px;font-weight:900;white-space:nowrap}
+.mode{padding:8px;border-radius:10px;background:#fff4f3;color:#b42318;font-size:11px;font-weight:800}.road-help{font-size:10px;color:var(--muted);line-height:1.4;margin-top:5px}
+#markerMode{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 88px);transform:translateX(-50%);z-index:1250;background:#111315;color:#fff;padding:7px 10px;border-radius:999px;font-size:11px;font-weight:850;box-shadow:var(--shadow);display:none}
+#toast{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 68px);transform:translateX(-50%);z-index:2000;background:#111315;color:#fff;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:800;box-shadow:var(--shadow);display:none;white-space:nowrap}
+.address-display{min-width:0;flex:1}
+.marker-add-sheet{z-index:1500}.marker-draw-sheet{z-index:1500}
+#markerMode{pointer-events:none}
+body.marker-placement #map{cursor:crosshair}
+.marker-placement-mask{position:absolute;inset:0;z-index:1150;pointer-events:none;display:none}
+.marker-placement .marker-placement-mask{display:block}
+.marker-placement .marker-placement-mask::after{content:'＋';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border:2px solid rgba(255,59,48,.8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ff3b30;font-size:28px;font-weight:900;background:rgba(255,255,255,.12)}
+@media(max-width:699px){.marker-placement .marker-placement-mask::after{width:40px;height:40px;font-size:25px}}
+.marker-add-btn{touch-action:manipulation}
+.marker-add-btn.vehicle{gap:2px}
+.marker-add-icon{width:42px;height:52px;object-fit:contain;display:block;flex:none}
+@media(max-width:699px){
+ .marker-add-btn.vehicle{min-height:78px}
+ .marker-add-icon{width:42px;height:52px}
+}
+
+ .guard-add-circle{width:38px;height:38px;border-radius:50%;background:#18a957;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;line-height:1;}
+
+@media(min-width:700px){.topbar{left:24px;right:auto;width:560px}.sheet{left:24px;right:auto;width:420px}.stats{left:24px;right:24px}.legend{left:24px}}
+@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px);left:8px;right:8px}.topcard{padding:7px 8px}.stats{bottom:calc(env(safe-area-inset-bottom) + 62px)}#toast{bottom:calc(env(safe-area-inset-bottom) + 105px)}.incident-title{gap:5px}}
+
+/* v21 mobile readability */
+.topbar{z-index:1400}.topcard{border-radius:12px}.searchbar .input{height:40px;font-size:16px}.searchbar .btn{height:40px;font-size:15px;padding:0 16px}.address-display{font-size:15px;line-height:1.3}.incident-title{min-height:36px}.chip{font-size:13px;padding:8px 10px}.chip b{font-size:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 66px);gap:6px}.chip{box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:11px 12px}.route-card-title{font-size:16px}.route-card-body{grid-template-columns:minmax(125px,.85fr) 1.15fr;gap:11px}.route-distance-label{font-size:13px}.route-main{font-size:52px;line-height:.92}.route-hose-box{font-size:15px}.route-hose-count{font-size:15px}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:9px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}.marker-sheet .actiongrid.single-action{grid-template-columns:160px!important;justify-content:center}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.97);border-radius:16px;padding:9px 18px;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:21px;font-weight:950;color:#14548a;white-space:nowrap;border:1px solid rgba(20,84,138,.08)}.route-summary::first-letter{font-size:25px}.route-summary.hidden{display:none}
+@media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px)}#mapControls{top:calc(env(safe-area-inset-top) + 118px);right:8px;z-index:1600}.fab{width:50px;height:50px;font-size:24px;border-radius:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 70px)}}
+@media(max-width:380px){.route-card-body{grid-template-columns:minmax(108px,.78fr) 1.22fr;gap:8px}.route-main{font-size:45px}.route-hose-box,.route-hose-count{font-size:13px}.route-card-title{font-size:15px}.route-distance-label{font-size:12px}.route-note{font-size:8px}}
+
+
+.history-sheet{max-height:65dvh}
+.history-empty{padding:18px 4px;text-align:center;color:var(--muted);font-size:13px}
+.history-item{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.history-main{min-width:0;flex:1}
+.history-date{font-size:13px;font-weight:900}
+.history-address{font-size:12px;font-weight:750;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.history-delete{flex:none;background:#fff0ee;color:#c52219;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:900}
+@media(max-width:699px){
+  .history-sheet{max-height:70dvh}
+  .history-date{font-size:15px}
+  .history-address{font-size:14px}
+  .history-sub{font-size:11px}
+  .history-delete{font-size:13px;padding:8px 10px}
+}
+
+
+/* v50: 水利ウィンドウの状態ボタンを4つ横一列 */
+#waterSheet .actiongrid{
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+#waterSheet .actiongrid .btn{
+  min-width:0 !important;
+  width:100% !important;
+  padding-left:3px !important;
+  padding-right:3px !important;
+  white-space:nowrap !important;
+  font-size:12px !important;
+}
+
+
+/* v38: 水利件数をコンパクトな2段表示に固定 */
+.stats{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:4px !important;
+  width:max-content !important;
+  max-width:none !important;
+  margin:0 auto !important;
+  padding:2px !important;
+}
+.stats::before{
+  content:none !important;
+}
+.stats .stats-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+}
+.stats .chip{
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  white-space:nowrap !important;
+  padding:4px 7px !important;
+  margin:0 !important;
+  font-size:11px !important;
+  line-height:1.15 !important;
+}
+.stats .chip b{font-size:13px !important}
+@media(max-width:699px){
+  .stats{
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    bottom:calc(env(safe-area-inset-bottom) + 70px) !important;
+    max-width:none !important;
+  }
+  .stats .chip{
+    padding:4px 7px !important;
+    font-size:11px !important;
+  }
+  .stats .chip b{font-size:13px !important}
+}
+
+
+/* v39: 水利数表示を約2倍に拡大し、状態ごとに色分け。署使用中は青で未確認の黄と明確に分離。 */
+.stats .chip{
+  padding:8px 13px !important;
+  font-size:16px !important;
+  font-weight:700 !important;
+  border:2px solid rgba(0,0,0,.18) !important;
+  border-radius:8px !important;
+  min-width:76px !important;
+}
+.stats .chip b{
+  font-size:20px !important;
+}
+.stats .chip:nth-child(1){
+  background:#ffffff !important;
+  color:#222 !important;
+}
+.stats .chip:nth-child(2){
+  background:#f2c94c !important;
+  color:#222 !important;
+}
+.stats .chip:nth-child(3){
+  background:#55b97a !important;
+  color:#fff !important;
+}
+.stats .stats-row:nth-child(2) .chip:nth-child(1){
+  background:#1677ff !important;
+  color:#fff !important;
+}
+.stats .stats-row:nth-child(2) .chip:nth-child(2){
+  background:#777 !important;
+  color:#fff !important;
+}
+@media(max-width:699px){
+  .stats .chip{
+    padding:8px 12px !important;
+    font-size:16px !important;
+    min-width:76px !important;
+  }
+  .stats .chip b{
+    font-size:20px !important;
+  }
+}
+
+
+/* v43: 過去現場の読み出しボタン */
+.history-view{
+  border:0;border-radius:9px;padding:9px 11px;background:#1677ff;color:#fff;
+  font-weight:700;white-space:nowrap;
+}
+.history-item{display:flex;align-items:center;gap:7px}
+.history-main{flex:1;min-width:0}
+.history-view,.history-delete{flex:0 0 auto}
+.history-readonly{
+  position:absolute;left:50%;top:72px;transform:translateX(-50%);
+  z-index:1200;background:rgba(40,40,40,.9);color:#fff;border-radius:18px;
+  padding:7px 13px;font-size:12px;font-weight:700;pointer-events:none;
+}
+
+
+/* v51: 過去現場の表示・削除中を明確に表示 */
+#historyLoading{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.38);backdrop-filter:blur(3px)}
+#historyLoading.show{display:flex}
+.history-loading-card{min-width:250px;max-width:82vw;background:rgba(255,255,255,.98);border-radius:18px;padding:18px 20px;text-align:center;box-shadow:0 14px 45px rgba(0,0,0,.3)}
+.history-spinner{width:30px;height:30px;margin:0 auto 10px;border:4px solid #e2e5e9;border-top-color:#1677ff;border-radius:50%;animation:historySpin .8s linear infinite}
+.history-loading-title{font-size:16px;font-weight:900}.history-loading-sub{font-size:11px;color:#6b7077;margin-top:4px}
+.history-loading-card.done .history-spinner,.history-loading-card.error .history-spinner{display:none}.history-loading-card.done .history-loading-title::before{content:''}.history-loading-card.error .history-loading-title::before{content:'! ';font-size:22px}
+@keyframes historySpin{to{transform:rotate(360deg)}}
+.history-action-busy{opacity:.6!important;pointer-events:none}
+
+/* v78: 現場マーカー追加ボタンを4つ横一列 */
+.marker-add-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+.marker-add-btn{min-width:0!important;width:100%!important;min-height:60px!important;padding:5px 3px!important;font-size:24px!important}
+.marker-add-btn span{font-size:11px!important}
+@media(max-width:699px){
+ .marker-add-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}
+ .marker-add-btn{min-height:62px!important;font-size:23px!important}
+ .marker-add-btn span{font-size:10px!important}
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+<div id="historyLoading" aria-live="polite"><div class="history-loading-card"><div class="history-spinner"></div><div id="historyLoadingTitle" class="history-loading-title">処理中…</div><div id="historyLoadingSub" class="history-loading-sub">しばらくお待ちください</div></div></div>
+<div id="map"></div>
+<div class="marker-placement-mask" aria-hidden="true"></div>
+
+<div class="topbar">
+ <div class="topcard">
+  <div id="searchArea" class="searchbar">
+   <input id="address" class="input" placeholder="火災住所を入力" autocomplete="street-address">
+   <button id="searchBtn" class="btn btn-primary" onclick="searchFire()">検索</button>
+  </div>
+  <div id="resultArea" class="hidden">
+   <div class="incident-title"><div id="headerSub" class="address-display"></div></div>
+  </div>
+ </div>
+</div>
+
+<div id="mapControls">
+ <button class="fab" onclick="openAddMenu()" title="マーカー追加">＋</button>
+ <button class="fab" onclick="refreshNow()" title="最新情報に更新">↻</button>
+ <button class="fab" onclick="openManageMenu()" title="管理">☰</button>
+</div>
+
+
+<div id="markerMode"></div>
+<div id="routeSummary" class="route-summary hidden"></div>
+<div id="stats" class="stats hidden"></div>
+
+<div id="waterSheet" class="sheet hidden">
+ <div class="grab"></div>
+ <div class="sheet-head">
+  <div><div id="waterTitle" class="sheet-title"></div><div id="waterDistance" class="distance"></div></div>
+  <button class="close" onclick="closeSheet('waterSheet')">×</button>
+ </div>
+ <div id="waterStatus" class="statusline"></div>
+ <div id="routeInfo" class="route-card">📏 ホース敷設距離を計算中…</div>
+ 
+ <div class="actiongrid">
+  <button id="waterUnknownBtn" class="btn btn-yellow" onclick="setWater('未確認')">未確認</button>
+  <button id="waterOkBtn" class="btn btn-green" onclick="setWater('使用可能')">使用可</button>
+  <button id="waterBusyBtn" class="btn btn-orange" onclick="setWater('消防署使用中')">署使用</button>
+  <button id="waterBadBtn" class="btn btn-red" onclick="setWater('使用困難')">使用困難</button>
+ </div>
+</div>
+
+<div id="markerSheet" class="sheet marker-sheet hidden">
+ <div class="grab"></div>
+ <div class="sheet-head">
+  <div><div id="markerTitle" class="sheet-title"></div><div id="markerBody" class="distance"></div></div>
+  <button class="close" onclick="closeSheet('markerSheet')">×</button>
+ </div>
+ <div id="guardMoveHint" class="mode hidden">移動モード：新しい配置場所をタップしてください</div>
+ <div id="markerActionGrid" class="actiongrid">
+  <button id="moveMarkerBtn" class="btn btn-light hidden" onclick="startMoveSelectedMarker()">移動</button>
+  <button class="btn btn-red" onclick="removeSelectedMarker()">削除</button>
+ </div>
+</div>
+
+<div id="listSheet" class="sheet hidden">
+ <div class="grab"></div>
+ <div class="sheet-head">
+  <div><div class="sheet-title">水利一覧</div><div id="listCount" class="distance"></div></div>
+  <button class="close" onclick="closeSheet('listSheet')">×</button>
+ </div>
+ <div id="waterList"></div>
+</div>
+
+<div id="addSheet" class="sheet marker-add-sheet hidden">
+ <div class="sheet-head"><div class="sheet-title">現場マーカー</div><button class="close" onclick="closeSheet('addSheet')">×</button></div>
+ <div class="marker-add-grid">
+  <button class="marker-add-btn vehicle" onclick="startAdd('truck')">
+   <img class="marker-add-icon" src="data:image/png;base64,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" alt="消防車">
+   <span>消防車</span>
+  </button>
+  <button class="marker-add-btn vehicle" onclick="startAdd('loader')">
+   <img class="marker-add-icon" src="data:image/png;base64,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" alt="積載車">
+   <span>積載車</span>
+  </button>
+  <button class="marker-add-btn" onclick="startAdd('guard')">
+   <span class="guard-add-circle">A</span><span>警備地点</span>
+  </button>
+  <button class="marker-add-btn road" onclick="startAdd('road')">
+   ⛔<span>通行止め</span>
+  </button>
+ </div>
+</div>
+
+<div id="drawSheet" class="sheet marker-draw-sheet hidden">
+ <div class="sheet-head"><div class="sheet-title">⛔ 通行止め</div><button class="close" onclick="cancelDraw()">×</button></div>
+ <div class="mode">道路に沿って2点以上タップ</div>
+ <div class="draw-actions"><button class="btn btn-light" onclick="cancelDraw()">取消</button><button class="btn btn-red" onclick="finishRoad()">登録</button></div>
+</div>
+
+
+
+<div id="manageSheet" class="sheet hidden">
+ <div class="grab"></div>
+ <div class="sheet-head">
+  <div class="sheet-title">現場管理</div>
+  <button class="close" onclick="closeSheet('manageSheet')">×</button>
+ </div>
+ <div class="actiongrid">
+  <button class="btn btn-blue" onclick="refreshFromManage()">🔄 最新情報</button>
+  <button class="btn btn-light" onclick="openHistory()">📋 過去の現場</button>
+  <button class="btn btn-red" style="grid-column:1/-1" onclick="confirmEndIncident()">🛑 現場終了</button>
+ </div>
+</div>
+
+<div id="historySheet" class="sheet history-sheet hidden">
+ <div class="grab"></div>
+ <div class="sheet-head">
+  <div>
+   <div class="sheet-title">📋 過去の現場</div>
+   <div id="historyCount" class="distance"></div>
+  </div>
+  <button class="close" onclick="closeSheet('historySheet')">×</button>
+ </div>
+ <div id="historyList"></div>
+</div>
+
+<div id="toast"></div>
+</div>
+
+<script>
+/* Google Maps version v69 */
+const API_URL='https://script.google.com/macros/s/AKfycbyeVm_S8Pa5j1rucZ4-GI2GnOLbsYeBpKWOkbOTToTvHQ0Hkw92jtM7z0hUioJeC59v/exec';
+const GOOGLE_MAPS_BROWSER_KEY='YOUR_GOOGLE_MAPS_BROWSER_KEY';
+
+function api(action, params={}, timeoutMs=15000){
+ return new Promise((resolve,reject)=>{
+  const cb='jsonp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+  const script=document.createElement('script');
+  const q=new URLSearchParams({...params,action,callback:cb,_:Date.now()});
+  let done=false;
+  const cleanup=()=>{if(done)return;done=true;try{delete window[cb]}catch(e){}script.remove()};
+  const timer=setTimeout(()=>{cleanup();reject(new Error('サーバー応答がタイムアウトしました。'))},timeoutMs);
+  window[cb]=(payload)=>{clearTimeout(timer);cleanup();if(payload&&payload.ok===false)reject(new Error(payload.error||'APIエラー'));else resolve(payload?payload.data:null)};
+  script.onerror=()=>{clearTimeout(timer);cleanup();reject(new Error('APIに接続できませんでした。'))};
+  script.src=API_URL+'?'+q.toString();
+  document.head.appendChild(script);
+ });
+}
+function setHistoryLoading(show,title='処理中…',sub='しばらくお待ちください'){
+ const el=$('historyLoading');if(!el)return;
+ $('historyLoadingTitle').textContent=title;$('historyLoadingSub').textContent=sub;
+ const card=el.querySelector('.history-loading-card');
+ if(card)card.classList.remove('done','error');
+ el.classList.toggle('show',!!show);
+}
+function showProcessing(title='処理中…',sub='しばらくお待ちください'){
+ hideToast();
+ setHistoryLoading(true,title,sub);
+}
+function finishProcessing(title='完了しました',sub='処理が完了しました',delay=800){
+ hideToast();
+ const el=$('historyLoading');if(!el)return;
+ const card=el.querySelector('.history-loading-card');
+ if(card)card.classList.add('done');
+ $('historyLoadingTitle').textContent=title;
+ $('historyLoadingSub').textContent=sub;
+ setTimeout(()=>setHistoryLoading(false),delay);
+}
+function failProcessing(title='処理に失敗しました',sub='もう一度お試しください',delay=1300){
+ hideToast();
+ const el=$('historyLoading');if(!el)return;
+ const card=el.querySelector('.history-loading-card');
+ if(card)card.classList.add('error');
+ $('historyLoadingTitle').textContent=title;
+ $('historyLoadingSub').textContent=sub;
+ setTimeout(()=>setHistoryLoading(false),delay);
+}
+
+let map=null,fireMarker=null,fireCircle=null,selectedWater=null,selectedMarker=null;
+let waterMarkers={},overlayMarkers={},waterData=[],jurisdictionData=[],jurisdictionLayers=[];
+const locallyDeletedMarkerIds=new Set();
+let tempRoad=[],tempLine=null,addingMode=null,incident=null,routeLayer=null,lastRouteMeters=0,syncTimer=null,syncBusy=false,markerSyncBusy=false,waterSyncBusy=false,incidentSession=0;
+let waterStatusTimer=null,waterStatusBusy=false,waterStatusSeq=0;
+let historyViewMode=false;
+let nearbyWaterClientCache=new Map();
+// 保存中の水利は、バックグラウンド同期で古い状態に戻さない。
+const pendingWaterSaves=new Map();
+const defaultCenter={lat:35.5572,lng:139.7330};
+const $=id=>document.getElementById(id);
+function showIncidentBadge(){}
+function hideIncidentBadge(){}
+
+
+function hideToast(){const el=$('toast');if(!el)return;el.style.display='none';clearTimeout(showToast.timer)}
+function showToast(msg){const el=$('toast');if(!el)return;el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',1800)}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function closeAllSheets(){document.querySelectorAll('.sheet').forEach(x=>x.classList.add('hidden'))}
+function closeSheet(id){$(id).classList.add('hidden');if(id==='drawSheet')cancelMarkerMode();if(id==='waterSheet'&&lastRouteMeters){$('routeSummary').textContent='📏 ホース敷設距離 '+lastRouteMeters+'m';$('routeSummary').classList.remove('hidden')}}
+function openManageMenu(){closeAllSheets();$('manageSheet').classList.remove('hidden')}
+
+async function refreshNow(){
+  if(!incident){
+    showToast('現在の現場がありません');
+    return;
+  }
+  if(syncBusy || waterSyncBusy){
+    showToast('更新中です。少しお待ちください');
+    return;
+  }
+
+  showProcessing('最新情報を更新中…','水利・マーカーの最新状態を取得しています');
+
+  try{
+    // v88の既存同期処理をそのまま利用。
+    // 現場・200m範囲・現在の表示状態は維持し、データだけ再取得する。
+    await loadAll(true);
+
+    // loadAll() の水利取得はバックグラウンドなので、完了まで待つ。
+    const started=Date.now();
+    while(waterSyncBusy && Date.now()-started<20000){
+      await new Promise(resolve=>setTimeout(resolve,100));
+    }
+
+    if(waterSyncBusy){
+      failProcessing('更新がまだ続いています','しばらくすると最新状態が表示されます',1300);
+      return;
+    }
+
+    finishProcessing('更新しました','最新情報を取得しました',650);
+  }catch(e){
+    failProcessing('更新に失敗しました',e.message||'もう一度お試しください');
+  }
+}
+
+async function refreshFromManage(){
+  if(!incident){showToast('現在の現場がありません');return}
+  closeSheet('manageSheet');
+  showProcessing('最新情報を更新中…','現場の最新状態を取得しています');
+  try{
+    await loadAll(false);
+    finishProcessing('更新しました','最新情報を取得しました',650);
+  }catch(e){
+    failProcessing('更新に失敗しました',e.message||'もう一度お試しください');
+  }
+}
+
+function formatIncidentDate(value){
+  const d=new Date(value);
+  if(isNaN(d.getTime()))return String(value||'日時不明');
+  return new Intl.DateTimeFormat('ja-JP',{
+    year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',hour12:false
+  }).format(d);
+}
+
+async function openHistory(){
+  closeAllSheets();
+  $('historySheet').classList.remove('hidden');
+  $('historyList').innerHTML='<div class="history-empty">履歴を読み込み中…</div>';
+  $('historyCount').textContent='';
+  setHistoryLoading(true,'過去現場を読み込み中…','履歴を取得しています');
+  try{
+    const rows=await api('getIncidentHistory',{},30000);
+    renderHistory(rows||[]);
+  }catch(e){
+    $('historyList').innerHTML='<div class="history-empty">履歴を読み込めませんでした。</div>';
+    alert('過去現場の読み込みに失敗しました。\n'+(e.message||e));
+  }finally{
+    setHistoryLoading(false);
+  }
+}
+
+function renderHistory(rows){
+  const list=Array.isArray(rows)?rows:[];
+  $('historyCount').textContent=list.length+'件';
+  if(!list.length){
+    $('historyList').innerHTML='<div class="history-empty">終了した現場はまだありません。</div>';
+    return;
+  }
+  $('historyList').innerHTML=list.map(r=>{
+    const id=escapeHtml(r.incidentId);
+    const address=escapeHtml(r.address||'住所不明');
+    const date=escapeHtml(formatIncidentDate(r.createdAt));
+    return `<div class="history-item">
+      <div class="history-main">
+        <div class="history-date">${date}</div>
+        <div class="history-address">${address}</div>
+        <div class="history-sub">現場ID：${id}</div>
+      </div>
+      <button class="history-view" onclick="openHistoryIncident('${id}')">表示</button>
+      <button class="history-delete" onclick="deleteHistory('${id}')">削除</button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteHistory(incidentId){
+  if(!incidentId)return;
+  if(!confirm('この現場履歴を削除します。\n水利の状態・消防車/積載車・通行止めも一緒に削除されます。\n本当に削除しますか？'))return;
+  showProcessing('過去現場を削除中…','サーバーから履歴と関連データを削除しています');
+  try{
+    await api('deleteIncident',{incidentId},30000);
+    finishProcessing('削除しました','過去現場と関連データを削除しました',650);
+    await openHistory();
+  }catch(e){
+    failProcessing('削除に失敗しました',e.message||'もう一度お試しください',1300);
+  }finally{
+    setHistoryLoading(false);
+  }
+}
+
+
+async function openHistoryIncident(incidentId){
+  if(!incidentId)return;
+  setHistoryLoading(true,'過去現場を表示中…','水利・車両・通行止めを復元しています');
+  try{
+    const d=await api('getIncidentHistoryDetail',{incidentId},45000);
+    if(!d||!d.incident)throw new Error('過去現場を読み込めませんでした。');
+
+    historyViewMode=true;
+    stopSharedPolling();
+    closeAllSheets();
+
+    incident=d.incident;
+    jurisdictionData=d.jurisdiction||[];
+    selectedWater=null;selectedMarker=null;
+    clearRoute();clearOverlays();
+    renderIncident(incident);
+    renderJurisdiction();
+
+    waterData=Array.isArray(d.water)?d.water:[];
+    waterData.forEach(addWaterMarker);
+    renderStats();renderList();
+    (d.markers||[]).forEach(addIncidentMarker);
+
+    $('headerSub').textContent='【過去現場】 '+incident.address;
+    $('stats').classList.remove('hidden');$('stats').style.display='';
+
+    let badge=$('historyReadonlyBadge');
+    if(!badge){
+      badge=document.createElement('div');
+      badge.id='historyReadonlyBadge';
+      badge.className='history-readonly';
+      document.getElementById('map').appendChild(badge);
+    }
+    badge.textContent='📋 過去現場（閲覧のみ）';
+    badge.classList.remove('hidden');
+
+    // 過去現場から履歴一覧へ戻れるボタンを用意
+    let back=$('historyBackBtn');
+    if(!back){
+      back=document.createElement('button');
+      back.id='historyBackBtn';
+      back.className='btn btn-light';
+      back.textContent='📋 履歴一覧へ戻る';
+      back.style.position='fixed';back.style.left='50%';back.style.bottom='calc(env(safe-area-inset-bottom) + 105px)';back.style.transform='translateX(-50%)';back.style.zIndex='2100';back.style.boxShadow='0 6px 20px rgba(0,0,0,.2)';
+      back.onclick=()=>{exitHistoryView();openHistory()};
+      document.body.appendChild(back);
+    }
+    back.classList.remove('hidden');
+    showToast('過去現場を表示しました');
+  }catch(e){
+    alert('過去現場を読み込めませんでした。\n'+(e.message||e));
+  }finally{
+    setHistoryLoading(false);
+  }
+}
+
+function exitHistoryView(){
+  historyViewMode=false;
+  const b=$('historyReadonlyBadge');if(b)b.classList.add('hidden');
+  const back=$('historyBackBtn');if(back)back.classList.add('hidden');
+  clearRoute();clearOverlays();
+  selectedWater=null;selectedMarker=null;incident=null;
+  $('stats').classList.add('hidden');
+  $('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';
+  showHome();
+}
+
+let startupLoading=false;
+async function loadStartupDataWithRetry(maxTry=4){
+  startupLoading=true;
+  let lastError=null;
+  for(let attempt=1;attempt<=maxTry;attempt++){
+    try{
+      const d=await api('getStartupData',{},7000);
+      jurisdictionData=d?.jurisdiction||[];
+      renderJurisdiction();
+      incident=d?.incident||null;
+      if(incident){
+        renderIncident(incident);
+        // 水利・マーカーは初期画面を止めず、完全にバックグラウンドで取得。
+        loadAll(true).catch(e=>console.warn('startup background load',e));
+      }else{
+        showHome();
+      }
+      startupLoading=false;
+      return true;
+    }catch(e){
+      lastError=e;
+      console.warn('startup attempt '+attempt+'/'+maxTry,e);
+      if(attempt<maxTry){
+        await new Promise(resolve=>setTimeout(resolve,attempt===1?500:attempt===2?1200:2200));
+      }
+    }
+  }
+  startupLoading=false;
+  // 初期取得に失敗しても「失敗しました」画面にはしない。
+  // 地図と住所検索はそのまま使用でき、5秒ごとの軽量同期で復旧できる。
+  showHome();
+  showToast('サーバーを確認中…');
+  return false;
+}
+
+async function initGoogleMap(){
+ try{
+  if(GOOGLE_MAPS_BROWSER_KEY==='YOUR_GOOGLE_MAPS_BROWSER_KEY'){
+   throw new Error('Google Maps APIキーが未設定です。index.html の GOOGLE_MAPS_BROWSER_KEY を設定してください。');
+  }
+  map=new google.maps.Map($('map'),{center:defaultCenter,zoom:15,streetViewControl:false,mapTypeControl:false,fullscreenControl:false,zoomControl:true,gestureHandling:'greedy',clickableIcons:false});
+  map.addListener('click',onMapClick);
+
+  // まず地図を表示。GASの初回起動待ちで画面全体を止めない。
+  showHome();
+  setTimeout(()=>google.maps.event.trigger(map,'resize'),200);
+
+  // 軽量な現場状態だけ取得。初回GAS起動が遅くても自動再試行する。
+  await loadStartupDataWithRetry(4);
+
+  startSharedPolling();
+  if(incident)startWaterStatusPolling();
+ }catch(e){
+  console.error(e);
+  showHome();
+  alert('Google Mapsの初期化に失敗しました。\n'+(e.message||e));
+ }
+}
+
+function loadGoogleMaps(){
+ const s=document.createElement('script');
+ s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)+'&callback=initGoogleMap&v=weekly';
+ s.async=true;s.defer=true;s.onerror=()=>alert('Google Mapsを読み込めませんでした。APIキーとMaps JavaScript APIを確認してください。');
+ document.head.appendChild(s);
+}
+
+function showHome(){$('routeSummary').classList.add('hidden');$('stats').classList.add('hidden');$('stats').style.display='none';$('searchArea').classList.remove('hidden');$('resultArea').classList.add('hidden');hideIncidentBadge()}
+function focusAddress(){const el=$('address');if(el){el.focus();el.select()}}
+$('address').addEventListener('keydown',e=>{if(e.key==='Enter')searchFire()});
+
+async function loadWaterInfo(){return null}
+async function refreshSharedState(){if(!incident){await loadWaterInfo();return}await loadAll(false);showToast('最新状態を取得しました')}
+function startSharedPolling(){
+  stopSharedPolling();
+  // 現場検索前も軽量な「現場開始確認」だけは続ける。
+  // これにより、アプリを開いたまま待機している端末も、
+  // 他端末で開始された現場を自動表示できる。
+  syncTimer=setInterval(()=>{
+    if(document.hidden)return;
+    syncActiveIncident();
+    if(incident){
+      syncMarkersOnly();
+    }
+  },5000);
+}
+function stopSharedPolling(){if(syncTimer){clearInterval(syncTimer);syncTimer=null}stopWaterStatusPolling()}
+
+// 他端末で現場終了した場合も、この端末を自動的に終了画面へ同期する。
+// getInitialData は水利を返さないため、重い水利読み込みは発生しない。
+let incidentStateSyncBusy=false;
+const pendingMarkerIds=new Set();
+async function syncActiveIncident(){
+  if(historyViewMode||incidentStateSyncBusy||startupLoading)return;
+  incidentStateSyncBusy=true;
+  const localIncident=incident;
+  try{
+    // getStartupData は水利一覧を返さない軽量チェック。
+    // 現場開始前の端末でも5秒ごとにここだけ確認する。
+    const state=await api('getStartupData',{},7000);
+    const remote=state?.incident||null;
+
+    if(!localIncident){
+      if(remote && remote.incidentId){
+        // この端末は待機中だったが、別端末で現場が開始された。
+        incidentSession++;
+        clearRoute();clearOverlays();
+        if(fireMarker)fireMarker.setMap(null);
+        if(fireCircle)fireCircle.setMap(null);
+        fireMarker=null;fireCircle=null;
+        incident=remote;
+        renderIncident(remote);
+        waterData=[];
+        $('stats').innerHTML='';
+        $('stats').classList.add('hidden');
+        $('stats').style.display='none';
+
+        // 水利はバックグラウンド、マーカーは軽量同期。
+        loadAll(true).catch(e=>console.warn('initial shared incident load',e));
+      }
+      return;
+    }
+
+    if(remote===null || remote===undefined){
+      // 他端末終了は現場終了と同じ中央ウィンドウで通知する。
+      hideToast();
+      finishLocalIncident();
+      showProcessing('現場を終了しました','他の端末で現場終了が反映されました');
+      finishProcessing('現場を終了しました','他の端末で現場終了が反映されました',1200);
+    }else if(remote.incidentId && String(remote.incidentId)!==String(localIncident.incidentId)){
+      // 別の現場が開始された場合は、古い現場を残さず新しい現場を読み込む。
+      incidentSession++;
+      clearRoute();clearOverlays();
+      if(fireMarker)fireMarker.setMap(null);
+      if(fireCircle)fireCircle.setMap(null);
+      fireMarker=null;fireCircle=null;
+      incident=remote;
+      renderIncident(remote);
+      waterData=[];
+      $('stats').innerHTML='';
+      $('stats').classList.add('hidden');
+      $('stats').style.display='none';
+      loadAll(true).catch(e=>console.warn('shared incident change load',e));
+    }
+  }catch(e){
+    console.warn('incident sync',e);
+  }finally{incidentStateSyncBusy=false}
+}
+function finishLocalIncident(message){
+  stopSharedPolling();
+  incidentSession++;
+  incident=null;selectedWater=null;selectedMarker=null;
+  clearRoute();
+  if(fireMarker)fireMarker.setMap(null);
+  if(fireCircle)fireCircle.setMap(null);
+  fireMarker=null;fireCircle=null;
+  clearOverlays();
+  waterData=[];
+  $('waterList').innerHTML='';
+  $('listCount').textContent='0件';
+  $('stats').innerHTML='';
+  $('stats').classList.add('hidden');
+  $('stats').style.display='none';
+  hideIncidentBadge();
+  $('headerSub').textContent='管轄：南蒲田3丁目・西糀谷1〜4丁目・北糀谷 ／ 周辺200mもカバー';
+  $('address').value='';
+  showHome();
+}
+
+function syncMarkersOnly(){
+  if(!incident||markerSyncBusy)return;
+  markerSyncBusy=true;
+  api('getActiveMarkers').then(markers=>{
+    const list=Array.isArray(markers)?markers:[];
+    const ids=new Set(list.map(m=>String(m.markerId)));
+    // サーバーから削除済みと確認できたIDだけ保護を解除。
+    locallyDeletedMarkerIds.forEach(id=>{
+      if(!ids.has(id))locallyDeletedMarkerIds.delete(id);
+    });
+
+    Object.keys(overlayMarkers).forEach(id=>{
+      // 登録直後・削除直後は古い同期結果で表示を戻さない。
+      if(pendingMarkerIds.has(String(id))||locallyDeletedMarkerIds.has(String(id)))return;
+      if(!ids.has(String(id))){
+        try{overlayMarkers[id].setMap(null)}catch(e){}
+        delete overlayMarkers[id];
+      }
+    });
+    list.forEach(m=>{
+      const id=String(m.markerId);
+      if(locallyDeletedMarkerIds.has(id))return;
+      const existing=overlayMarkers[id];
+      if(!existing){addIncidentMarker(m);return;}
+      if(m.type==='guard'&&typeof existing.setPosition==='function'){
+        const lat=Number(m.lat),lng=Number(m.lng);
+        if(isFinite(lat)&&isFinite(lng))existing.setPosition({lat,lng});
+      }
+      if(selectedMarker&&String(selectedMarker.markerId)===id)selectedMarker=Object.assign(selectedMarker,m);
+    });
+  }).catch(e=>console.warn('marker sync',e)).finally(()=>{markerSyncBusy=false});
+}
+
+
+async function geocodeWithRetry(address,maxTry=4){
+  let lastError=null;
+  for(let i=0;i<maxTry;i++){
+    try{
+      const r=await api('geocodeAddress',{address});
+      if(r&&isFinite(Number(r.lat))&&isFinite(Number(r.lng)))return r;
+      throw new Error('住所を特定できませんでした。');
+    }catch(e){
+      lastError=e;
+      if(i<maxTry-1){
+        $('historyLoadingSub').textContent='住所を確認しています…（再試行 '+(i+2)+'/'+maxTry+'）';
+        await new Promise(resolve=>setTimeout(resolve,900));
+      }
+    }
+  }
+  throw lastError||new Error('住所を検索できませんでした。');
+}
+
+async function searchFire(){
+  const a=$('address').value.replace(/[\u3000]/g,' ').trim();
+  if(!a){focusAddress();return}
+  const b=$('searchBtn');b.disabled=true;b.textContent='検索中';
+  // startIncidentの通信だけがタイムアウトしても、GAS側で二重現場を作らないためのID。
+  const startRequestId='SR_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
+  showProcessing('現場を検索中…','住所と現場情報を確認しています');
+  try{
+   const r=await geocodeWithRetry(a,4);
+   $('historyLoadingSub').textContent='現場情報を取得しています…';
+
+   let d=null,lastStartError=null;
+   for(let attempt=0;attempt<2;attempt++){
+     try{
+       d=await api('startIncident',{address:r.address,lat:r.lat,lng:r.lng,radiusM:200,requestId:startRequestId},30000);
+       if(d&&d.incident)break;
+       throw new Error('現場情報を取得できませんでした。');
+     }catch(e){
+       lastStartError=e;
+       if(attempt===0){
+         $('historyLoadingSub').textContent='現場情報を確認しています…（再試行 2/2）';
+         await new Promise(resolve=>setTimeout(resolve,1200));
+       }
+     }
+   }
+   if(!d||!d.incident)throw lastStartError||new Error('現場情報を取得できませんでした。');
+   incidentSession++;incident=d.incident;jurisdictionData=d.jurisdiction||jurisdictionData;
+   clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
+   $('headerSub').textContent=incident.address;
+   $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
+   waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
+   startSharedPolling();startWaterStatusPolling();
+   finishProcessing('現場を開始しました','周辺の水利を表示しています',700);
+  }catch(e){
+   failProcessing('現場の開始に失敗しました',e.message||'もう一度お試しください',1500);
+  }finally{
+   b.disabled=false;b.textContent='検索';
+  }
+}
+
+function clearOverlays(){
+  Object.values(waterMarkers).forEach(m=>{
+    try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+  });
+  Object.values(overlayMarkers).forEach(m=>{
+    try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+  });
+  waterMarkers={};
+  overlayMarkers={};
+}
+
+function color(w){
+  return w.status==='使用可能'?'#18a957':
+         w.status==='消防署使用中'?'#1677ff':
+         w.status==='使用困難'?'#ff3b30':'#d99a00';
+}
+
+function addWaterMarker(w){
+  if(!w||w.id===undefined||w.lat===undefined||w.lng===undefined)return;
+  const old=waterMarkers[w.id];
+  if(old){
+    try{old.setMap(null)}catch(e){}
+    delete waterMarkers[w.id];
+  }
+  // 消火栓と防火水槽は「形」で明確に区別する。
+  // 消火栓=円、防火水槽=★の5角星。状態色はこれまで通り。
+  const isTank=String(w.type||'').indexOf('防火水槽')>=0;
+  const fill=color(w);
+  const opacity=w.zone==='周辺'?.72:1;
+  const starSvg='<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"44\" height=\"44\" viewBox=\"0 0 44 44\"><polygon points=\"22,3 27.6,15.2 40.9,16.5 30.9,25.4 33.8,38.5 22,31.8 10.2,38.5 13.1,25.4 3.1,16.5 16.4,15.2\" fill=\"'+fill+'\" fill-opacity=\"'+opacity+'\" stroke=\"white\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>';
+  const marker=new google.maps.Marker({
+    map,
+    position:{lat:Number(w.lat),lng:Number(w.lng)},
+    title:w.type||'水利',
+    zIndex:100+(w.zone==='周辺'?0:10),
+    icon:isTank?{
+      url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(starSvg),
+      scaledSize:new google.maps.Size(30,30),
+      anchor:new google.maps.Point(15,15)
+    }:{
+      path:google.maps.SymbolPath.CIRCLE,
+      scale:10,
+      fillColor:fill,
+      fillOpacity:opacity,
+      strokeColor:'#fff',
+      strokeWeight:3
+    }
+  });
+  marker.setClickable(!addingMode);
+  marker.addListener('click',()=>{
+    if(!addingMode)showWater(w);
+  });
+  waterMarkers[w.id]=marker;
+}
+
+function renderJurisdiction(){jurisdictionLayers.forEach(x=>x.setMap(null));jurisdictionLayers=[];jurisdictionData.forEach(a=>{const south=Number(a.south),west=Number(a.west),north=Number(a.north),east=Number(a.east);if(![south,west,north,east].every(isFinite))return;const core=new google.maps.Rectangle({map,bounds:{south,west,north,east},strokeColor:'#16834b',strokeWeight:2,fillColor:'#16834b',fillOpacity:.035,clickable:false});const m=Number(a.bufferM||200);const latDeg=m/111320,lngDeg=m/(111320*Math.cos((incident?incident.lat:35.55)*Math.PI/180));const near=new google.maps.Rectangle({map,bounds:{south:south-latDeg,west:west-lngDeg,north:north+latDeg,east:east+lngDeg},strokeColor:'#d39b00',strokeWeight:1,strokeOpacity:1,fillOpacity:0,clickable:false});jurisdictionLayers.push(core,near)})}
+function renderIncident(i){if(!i)return;document.querySelectorAll('.sheet').forEach(x=>x.classList.add('hidden'));$('headerSub').textContent=i.address;$('resultArea').classList.remove('hidden');$('searchArea').classList.add('hidden');showIncidentBadge();
+ if(fireMarker)fireMarker.setMap(null);if(fireCircle)fireCircle.setMap(null);
+ fireMarker=new google.maps.Marker({position:{lat:Number(i.lat),lng:Number(i.lng)},map,label:{text:'🔥',fontSize:'24px'},zIndex:1000,title:'火災地点',clickable:false});
+ fireCircle=new google.maps.Circle({map,center:{lat:Number(i.lat),lng:Number(i.lng)},radius:Number(i.radiusM),strokeColor:'#ff3b30',strokeWeight:2,fillColor:'#ff3b30',fillOpacity:.04,clickable:false});
+ const bounds=fireCircle.getBounds();if(bounds)map.fitBounds(bounds,120);
+}
+async function refreshWaterInBackground(silent=true, session=incidentSession){
+  if(!incident||waterSyncBusy)return;
+  waterSyncBusy=true;
+  const currentIncident=incident;
+  const lat=Number(currentIncident.lat),lng=Number(currentIncident.lng);
+  const radius=Number(currentIncident.radiusM||200);
+  try{
+    const latest=await api('getNearbyWater',{lat,lng,radiusM:radius});
+    if(session!==incidentSession||!incident||incident!==currentIncident)return;
+    if(Array.isArray(latest)){
+      // 保存中の水利はサーバー側の古い状態で上書きしない。
+      latest.forEach(w=>{
+        const pending=pendingWaterSaves.get(String(w.id));
+        if(pending)w.status=pending.status;
+      });
+      waterData=latest;
+      nearbyWaterClientCache.set(Number(lat).toFixed(5)+','+Number(lng).toFixed(5)+','+Number(radius),latest);
+      Object.values(waterMarkers).forEach(m=>{try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}});
+      waterMarkers={};
+      waterData.forEach(addWaterMarker);
+      renderStats();
+      renderList();
+      if(!silent)showToast('最新の水利状態を更新しました');
+    }
+  }catch(e){console.warn('water refresh',e)}
+  finally{waterSyncBusy=false}
+}
+
+
+async function syncWaterStatusesOnly(){
+  if(!incident || waterStatusBusy || !waterData.length)return;
+  const seq=waterStatusSeq, currentIncident=incident;
+  const ids=waterData.map(w=>String(w.id)).join(',');
+  waterStatusBusy=true;
+  try{
+    if(typeof api!=='function')return;
+    const result=await api('getWaterStatuses',{waterIds:ids});
+    if(seq!==waterStatusSeq || !incident || incident!==currentIncident)return;
+    if(!result || String(result.incidentId)!==String(currentIncident.incidentId))return;
+    const states=result.states||{};
+    let changed=false;
+    waterData.forEach(w=>{
+      const id=String(w.id);
+      // 自端末で保存中の水利は、古いポーリング結果で戻さない。
+      if(pendingWaterSaves.has(id))return;
+      if(!Object.prototype.hasOwnProperty.call(states,id))return;
+      const next=String(states[id]||'未確認');
+      if(w.status!==next){w.status=next;changed=true;}
+    });
+    if(changed){
+      Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
+      waterMarkers={};
+      waterData.forEach(addWaterMarker);
+      renderStats();
+      renderList();
+    }
+  }catch(e){console.warn('water status sync failed',e)}
+  finally{if(seq===waterStatusSeq)waterStatusBusy=false}
+}
+function startWaterStatusPolling(){
+  if(waterStatusTimer)clearInterval(waterStatusTimer);
+  waterStatusTimer=setInterval(syncWaterStatusesOnly,5000);
+}
+function stopWaterStatusPolling(){
+  if(waterStatusTimer){clearInterval(waterStatusTimer);waterStatusTimer=null}
+  waterStatusSeq++; waterStatusBusy=false;
+}
+
+async function loadAll(silent=false){
+  if(!incident||syncBusy)return;
+  syncBusy=true;
+
+  try{
+    const key=Number(incident.lat).toFixed(5)+','+
+              Number(incident.lng).toFixed(5)+','+
+              Number(incident.radiusM||200);
+
+    // まず現在端末のキャッシュを表示。ここでは通信を待たない。
+    const cached=nearbyWaterClientCache.get(key);
+    if(cached&&cached.length){
+      waterData=cached;
+      Object.values(waterMarkers).forEach(m=>{
+        try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
+      });
+      waterMarkers={};
+      waterData.forEach(addWaterMarker);
+      renderStats();
+      renderList();
+    }
+
+    // マーカーは軽量APIで即時同期。
+    await new Promise((resolve)=>{
+      api('getActiveMarkers').then(markers=>{
+        const list=Array.isArray(markers)?markers:[];
+        const ids=new Set(list.map(m=>String(m.markerId)));
+
+        locallyDeletedMarkerIds.forEach(id=>{
+          if(!ids.has(id))locallyDeletedMarkerIds.delete(id);
+        });
+
+        Object.keys(overlayMarkers).forEach(id=>{
+          if(id==='TEMP_ROAD')return;
+          if(locallyDeletedMarkerIds.has(String(id)))return;
+          if(!ids.has(String(id))){
+            try{overlayMarkers[id].setMap(null)}catch(e){}
+            delete overlayMarkers[id];
+          }
+        });
+
+        list.forEach(m=>{
+          const id=String(m.markerId);
+          if(locallyDeletedMarkerIds.has(id))return;
+          const existing=overlayMarkers[id];
+          if(!existing){addIncidentMarker(m);return;}
+          if(m.type==='guard'&&typeof existing.setPosition==='function'){
+            const lat=Number(m.lat),lng=Number(m.lng);
+            if(isFinite(lat)&&isFinite(lng))existing.setPosition({lat,lng});
+          }
+          if(selectedMarker&&String(selectedMarker.markerId)===id)selectedMarker=Object.assign(selectedMarker,m);
+        });
+      }).catch(e=>console.warn('marker refresh',e))
+        .finally(resolve);
+    });
+
+    // 水利はバックグラウンド。ここを待たないので「最新情報」で1分以上固まらない。
+    refreshWaterInBackground(silent,incidentSession);
+
+  }catch(e){
+    console.error(e);
+    if(!silent)alert('現場データの読み込みに失敗しました。\n'+(e.message||e));
+  }finally{
+    syncBusy=false;
+  }
+}
+
+function addWaterMarkerRefresh(w){if(waterMarkers[w.id])waterMarkers[w.id].setMap(null);addWaterMarker(w)}
+function updateWaterClientCacheStatus(waterId,status){
+  const id=String(waterId);
+  nearbyWaterClientCache.forEach(arr=>{
+    if(!Array.isArray(arr))return;
+    const hit=arr.find(w=>String(w.id)===id);
+    if(hit)hit.status=status;
+  });
+}
+function showWater(w){
+ selectedWater=w;
+ $('waterTitle').textContent=(String(w.type).indexOf('防火水槽')>=0?'⭐ ':'● ')+w.type;
+ $('waterDistance').textContent='直線 '+w.distance+'m';
+ renderWaterStatus();
+ $('waterSheet').classList.remove('hidden');
+ calculateRouteToWater(w);
+}
+function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=historyViewMode)}
+async function setWater(status){
+  if(!selectedWater||historyViewMode)return;
+  const water=selectedWater;
+  const id=String(water.id);
+  const previousStatus=String(water.status||'未確認');
+  if(previousStatus===String(status))return;
+  const buttons=[$('waterOkBtn'),$('waterBusyBtn'),$('waterBadBtn'),$('waterUnknownBtn')];
+  buttons.forEach(b=>b.disabled=true);
+
+  // 画面は先に更新。保存完了を待たず、現場では即時反映して見せる。
+  water.status=String(status);
+  pendingWaterSaves.set(id,{status:String(status),previousStatus});
+  updateWaterClientCacheStatus(id,String(status));
+  renderWaterStatus();
+  addWaterMarkerRefresh(water);
+  renderStats();
+  renderList();
+
+  // 速い保存では処理ウィンドウを一瞬も出さない。
+  // 350msを超えた時だけ「保存中」を表示する。
+  let processingShown=false;
+  let slowTimer=setTimeout(()=>{
+    if(pendingWaterSaves.has(id)){
+      processingShown=true;
+      showProcessing('水利情報を保存中…','状態をサーバーへ保存しています');
+    }
+  },350);
+  // showProcessingが呼ばれたかをDOM状態から判定する。
+  try{
+    const result=await api('saveWaterStatus',{waterId:id,status:String(status)});
+    clearTimeout(slowTimer);
+    pendingWaterSaves.delete(id);
+    updateWaterClientCacheStatus(id,String(status));
+    if(typeof result==='object' && result && result.saved===false)throw new Error('保存できませんでした。');
+    if(processingShown)finishProcessing('保存しました',String(status)+' に更新しました',450);
+  }catch(e){
+    clearTimeout(slowTimer);
+    pendingWaterSaves.delete(id);
+    // 保存失敗時だけ元の状態へ戻す。
+    water.status=previousStatus;
+    updateWaterClientCacheStatus(id,previousStatus);
+    renderWaterStatus();
+    addWaterMarkerRefresh(water);
+    renderStats();
+    renderList();
+    failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);
+  }finally{
+    buttons.forEach(b=>b.disabled=historyViewMode);
+  }
+}
+
+function renderStats(){
+  const s={all:waterData.length,unknown:waterData.filter(w=>w.status==='未確認').length,ok:waterData.filter(w=>w.status==='使用可能').length,busy:waterData.filter(w=>w.status==='消防署使用中').length,bad:waterData.filter(w=>w.status==='使用困難').length};
+  $('stats').innerHTML=
+    '<div class="stats-row">'+
+      '<div class="chip">全て <b>'+s.all+'</b></div>'+
+      '<div class="chip">未確認 <b>'+s.unknown+'</b></div>'+
+      '<div class="chip">使用可 <b>'+s.ok+'</b></div>'+
+    '</div>'+
+    '<div class="stats-row">'+
+      '<div class="chip">署使用 <b>'+s.busy+'</b></div>'+
+      '<div class="chip">使用困難 <b>'+s.bad+'</b></div>'+
+    '</div>';
+  $('stats').classList.remove('hidden');
+}
+function renderList(filter='all'){const box=$('waterList');const arr=filter==='all'?waterData:waterData.filter(w=>filter==='unknown'?w.status==='未確認':filter==='ok'?w.status==='使用可能':filter==='busy'?w.status==='消防署使用中':w.status==='使用困難');$('listCount').textContent=arr.length+'件';box.innerHTML=arr.map(w=>`<div class="list-item" onclick="showWaterById('${escapeHtml(w.id)}')"><div class="dot" style="background:${color(w)}"></div><div class="list-main"><div class="list-name">${escapeHtml(w.type)}</div><div class="list-sub">直線 ${w.distance}m</div></div><div class="list-status" style="color:${color(w)}">${escapeHtml(w.status)}</div></div>`).join('')||'<div class="distance" style="padding:12px 2px">該当する水利はありません。</div>'}
+function showWaterById(id){const w=waterData.find(x=>String(x.id)===String(id));if(!w)return;map.panTo({lat:Number(w.lat),lng:Number(w.lng)});map.setZoom(17);showWater(w)}
+function openList(filter='all'){closeAllSheets();renderList(filter);$('listSheet').classList.remove('hidden')}
+
+function openAddMenu(){if(!incident){alert('先に火災住所を検索してください。');return}closeAllSheets();$('addSheet').classList.remove('hidden')}
+function setWaterMarkersClickable(enabled){
+ Object.values(waterMarkers).forEach(m=>{try{m.setClickable(enabled)}catch(e){}});
+ Object.values(overlayMarkers).forEach(m=>{try{if(m&&typeof m.setClickable==='function')m.setClickable(enabled)}catch(e){}});
+}
+function setPlacementMode(enabled){
+  document.body.classList.toggle('marker-placement',enabled);
+  if(enabled){
+   // 配置中は水利・既存マーカー・通行止め線が地図タップを奪わないようにする。
+   Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
+   Object.values(overlayMarkers).forEach(m=>{
+     try{
+       if(m&&typeof m.setClickable==='function')m.setClickable(false);
+       if(m&&typeof m.getPath==='function')m.setMap(null);
+     }catch(e){}
+   });
+   setWaterMarkersClickable(false);
+   try{if(routeLayer){
+     if(Array.isArray(routeLayer))routeLayer.forEach(x=>x.setOptions?.({clickable:false}));
+     else routeLayer.setOptions?.({clickable:false});
+   }}catch(e){}
+  }else{
+   Object.values(waterMarkers).forEach(m=>{try{m.setMap(map)}catch(e){}});
+   Object.values(overlayMarkers).forEach(m=>{
+     try{
+       if(m&&typeof m.getPath==='function')m.setMap(map);
+       if(m&&typeof m.setClickable==='function')m.setClickable(true);
+     }catch(e){}
+   });
+   setWaterMarkersClickable(true);
+  }
+}
+
+function startAdd(mode){
+ if(!incident){alert('先に火災住所を検索してください。');return}
+ closeAllSheets();
+ addingMode=mode;
+ setPlacementMode(true);
+ $('markerMode').style.display='block';
+ if(mode==='road'){
+  tempRoad=[]; if(tempLine){tempLine.setMap(null);tempLine=null;}
+  $('markerMode').textContent='⛔ 道路を2点以上タップ → 登録';
+  $('drawSheet').classList.remove('hidden');
+ }else if(mode==='guard'){
+  $('markerMode').textContent='🟢 警備地点を1回タップ';
+  showToast('警備を配置する地点をタップ');
+ }else{
+  $('markerMode').textContent=mode==='loader'?'🚚 地図を1回タップ':'🚒 地図を1回タップ';
+  showToast(mode==='loader'?'積載車の位置をタップ':'消防車の位置をタップ');
+ }
+}
+function cancelMarkerMode(){
+ addingMode=null;tempRoad=[];
+ if(tempLine){tempLine.setMap(null);tempLine=null}
+ $('drawSheet').classList.add('hidden');
+ $('markerMode').style.display='none';
+ setPlacementMode(false);
+}
+
+function onMapClick(e){
+ if(!addingMode)return;
+ const lat=e.latLng.lat(),lng=e.latLng.lng();
+
+ // 警備員の移動：移動ボタンを押した後だけ有効。タップしただけでは動かない。
+ if(addingMode==='guardMove'){
+  if(!selectedMarker)return;
+  const target=selectedMarker;
+  if(!confirm((target.name||'警備')+'をこの場所へ移動しますか？'))return;
+  const marker=overlayMarkers[target.markerId];
+  showProcessing('警備地点を移動中…','新しい配置場所を保存しています');
+  addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);
+  api('updateMarker',{markerId:target.markerId,lat,lng}).then(m=>{
+    if(!m)throw new Error('移動結果を取得できませんでした。');
+    target.lat=Number(m.lat??lat);target.lng=Number(m.lng??lng);
+    if(marker&&typeof marker.setPosition==='function')marker.setPosition({lat:target.lat,lng:target.lng});
+    selectedMarker=target;
+    finishProcessing('移動しました',(target.name||'A')+'地点を新しい場所へ移動しました',650);
+  }).catch(err=>{
+    failProcessing('移動に失敗しました',err.message||'もう一度お試しください',1300);
+  });
+  return;
+ }
+
+ // 警備員の新規配置
+ if(addingMode==='guard'){
+  addingMode=null;$('markerMode').style.display='none';setPlacementMode(false);
+  showProcessing('警備地点を保存中…','配置場所をサーバーへ保存しています');
+  api('addGuardMarker',{lat,lng}).then(m=>{
+    if(!m||!m.markerId)throw new Error('警備マーカーを保存できませんでした。');
+    addIncidentMarker(m);
+    finishProcessing('登録しました',m.name+'地点を配置しました',650);
+  }).catch(err=>failProcessing('保存に失敗しました',err.message||'もう一度お試しください',1300));
+  return;
+ }
+
+ // 消防車・積載車
+ // 仮マーカーを先に表示し、保存完了後も「同じマーカー」をそのまま使う。
+ // これで保存時の「一瞬消える→再表示」を防ぐ。
+ if(addingMode==='truck'||addingMode==='loader'){
+  const mode=addingMode,name=mode==='loader'?'積載車':'消防車';
+  addingMode=null;
+  $('markerMode').style.display='none';
+  setPlacementMode(false);
+
+  const tempId='TEMP_'+Date.now();
+  const temp={markerId:tempId,type:mode,name,lat,lng,status:''};
+  pendingMarkerIds.add(tempId);
+  addIncidentMarker(temp);
+  showProcessing(name+'を保存中…','登録位置をサーバーへ保存しています');
+
+  api('addMarker',{type:mode,name,lat,lng,status:''}).then(m=>{
+   if(m){
+    const marker=overlayMarkers[tempId];
+
+    if(marker){
+     // 既存の表示中マーカーをサーバー保存後のIDへ引き継ぐ。
+     // setMap(null) をしないので画面上で消えない。
+     try{google.maps.event.clearListeners(marker,'click')}catch(e){}
+     marker.setTitle(m.name||name);
+     marker.setClickable(true);
+     marker.addListener('click',()=>showMarkerInfo(m));
+
+     delete overlayMarkers[tempId];
+     pendingMarkerIds.delete(tempId);
+     overlayMarkers[m.markerId]=marker;
+    }else{
+     pendingMarkerIds.delete(tempId);
+     addIncidentMarker(m);
+    }
+
+    finishProcessing('登録しました',name+'を保存しました',650);
+   }else{
+    failProcessing('保存に失敗しました','サーバーから登録結果を取得できませんでした',1300);
+   }
+  }).catch(err=>{
+   // 保存失敗時は仮マーカーを残さず、エラーを知らせる。
+   if(overlayMarkers[tempId]){
+    overlayMarkers[tempId].setMap(null);
+    delete overlayMarkers[tempId];
+   }
+   pendingMarkerIds.delete(tempId);
+   failProcessing('保存に失敗しました',err.message||'もう一度お試しください',1300);
+  });
+  return;
+ }
+
+ // 通行止め
+ if(addingMode==='road'){
+  tempRoad.push({lat,lng});
+  if(tempLine)tempLine.setMap(null);
+  tempLine=new google.maps.Polyline({
+   map,
+   path:tempRoad,
+   strokeColor:'#ff3b30',
+   strokeWeight:10,
+   strokeOpacity:0.58,
+   clickable:false,
+   zIndex:900
+  });
+ }
+}
+async function finishRoad(){
+ if(tempRoad.length<2){alert('道路に沿って2点以上タップしてください。');return}
+
+ // 登録中も描画した赤線を地図から消さない。
+ // 保存完了後は「同じ線」を正式マーカーとして引き継ぐ。
+ const path=tempRoad.slice();
+ const c=path[Math.floor(path.length/2)];
+ const oldLine=tempLine;
+
+ addingMode=null;
+ $('markerMode').style.display='none';
+ $('drawSheet').classList.add('hidden');
+ setPlacementMode(false);
+
+ showProcessing('通行止めを保存中…','通行止め区間をサーバーへ保存しています');
+ try{
+  const m=await api('addMarker',{
+   type:'road',
+   name:'通行止め区間',
+   lat:c.lat,
+   lng:c.lng,
+   status:JSON.stringify(path)
+  });
+
+  if(m && oldLine){
+   // 仮線を消さず、そのまま正式な通行止めマーカーへ昇格。
+   let savedPath=path;
+   try{
+    const p=JSON.parse(m.status||m.geometry||'[]');
+    if(p.length>=2){
+     savedPath=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));
+    }
+   }catch(e){}
+
+   oldLine.setPath(savedPath);
+   oldLine.setOptions({clickable:true,zIndex:900});
+
+   try{google.maps.event.clearListeners(oldLine,'click')}catch(e){}
+   oldLine.addListener('click',()=>showMarkerInfo(m));
+
+   delete overlayMarkers['TEMP_ROAD'];
+   overlayMarkers[m.markerId]=oldLine;
+   tempLine=null;
+   tempRoad=[];
+   finishProcessing('登録しました','通行止めを保存しました',650);
+  }else if(m){
+   addIncidentMarker(m);
+   tempLine=null;
+   tempRoad=[];
+   finishProcessing('登録しました','通行止めを保存しました',650);
+  }else{
+   // 保存失敗時は仮線を残して、場所を確認できるようにする。
+   failProcessing('保存に失敗しました','サーバーから登録結果を取得できませんでした');
+  }
+ }catch(e){
+  // エラー時も仮線を消さない。
+  failProcessing('保存に失敗しました',e.message||'もう一度お試しください',1300);
+ }
+}
+function cancelDraw(){cancelMarkerMode()}
+function addIncidentMarker(m){
+ if(!m||!m.markerId)return;
+ if(overlayMarkers[m.markerId]){overlayMarkers[m.markerId].setMap(null);delete overlayMarkers[m.markerId]}
+ if(m.type==='road'){
+  let p=[];try{p=JSON.parse(m.status||m.geometry||'[]')}catch(e){}
+  if(p.length<2)return;
+  const path=p.map(x=>({lat:Number(x.lat??x[0]),lng:Number(x.lng??x[1])}));
+  // 通行止め線は「選択モード中」はクリックで邪魔をしない。
+  // 通常時だけ選択できるようにする。
+  const line=new google.maps.Polyline({
+   map,
+   path,
+   strokeColor:'#ff3b30',
+   strokeWeight:12,
+   strokeOpacity:0.58,
+   clickable:!addingMode,
+   zIndex:900
+  });
+  line.addListener('click',()=>{
+   if(!addingMode)showMarkerInfo(m);
+  });
+  overlayMarkers[m.markerId]=line;
+ }else if(m.type==='guard'){
+  const label=String(m.name||'A');
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 58 58">
+    <circle cx="29" cy="29" r="26" fill="#18a957" stroke="#fff" stroke-width="3"/>
+    <text x="29" y="38" text-anchor="middle" font-size="24" font-weight="900" fill="#fff" font-family="Arial,sans-serif">${label}</text>
+  </svg>`;
+  const marker=new google.maps.Marker({map,position:{lat:Number(m.lat),lng:Number(m.lng)},title:label,icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(58,58),anchor:new google.maps.Point(29,29)}});
+  marker.setClickable(!addingMode);
+  marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});
+  overlayMarkers[m.markerId]=marker;
+ }else{
+  // 車両は、指定された消防車・積載車のPNG画像をそのままマーカーに使用。
+  // 左の画像 = 消防車、右の画像 = 積載車。
+  // 画像はHTML内に埋め込んでいるため、GitHubへPNGを別途置く必要はありません。
+  const isLoader = m.type==='loader' || m.type==='積載車';
+  const isFire = m.type==='truck' || m.type==='fire' || m.type==='消防車';
+  const iconUrl = isLoader ? 'data:image/png;base64,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' : 'data:image/png;base64,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';
+
+  const marker=new google.maps.Marker({
+    map,
+    position:{lat:Number(m.lat),lng:Number(m.lng)},
+    title:m.name||(isLoader?'積載車':'消防車'),
+    icon:{
+      url:iconUrl,
+      scaledSize:new google.maps.Size(36,48),
+      // 透明余白を考慮して、車体の下側が配置地点に来るよう調整。
+      anchor:isLoader
+        ? new google.maps.Point(18,38)
+        : new google.maps.Point(18,42)
+    }
+  });
+  marker.setClickable(!addingMode);
+  marker.addListener('click',()=>{if(!addingMode)showMarkerInfo(m)});
+  overlayMarkers[m.markerId]=marker;
+ }
+}
+function showMarkerInfo(m){
+ selectedMarker=m;
+ const isGuard=m.type==='guard';
+ $('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':isGuard?'🟢 ':'⛔ ')+(isGuard?((m.name||'A')+'地点'):(m.name||''));
+ $('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':isGuard?'警備配置地点':'通行止め区間';
+ const move=$('moveMarkerBtn');
+ const actionGrid=$('markerActionGrid');
+ if(move)move.classList.toggle('hidden',!isGuard);
+ if(actionGrid)actionGrid.classList.toggle('single-action',!isGuard);
+ $('markerSheet').classList.remove('hidden');
+}
+function startMoveSelectedMarker(){
+ if(!selectedMarker||selectedMarker.type!=='guard')return;
+ closeSheet('markerSheet');
+ addingMode='guardMove';
+ $('markerMode').style.display='block';
+ $('markerMode').textContent='🟢 '+(selectedMarker.name||'A')+'地点の移動先をタップ';
+ setPlacementMode(true);
+}
+async function removeSelectedMarker(){
+  if(!selectedMarker)return;
+  if(!confirm('このマーカーを削除しますか？'))return;
+  const markerId=selectedMarker.markerId;
+  locallyDeletedMarkerIds.add(String(markerId));
+  showProcessing('マーカーを削除中…','サーバーから削除しています');
+  try{
+    const result=await api('deleteMarker',{markerId});
+    if(result!==true)throw new Error('サーバー側でマーカーを削除できませんでした。');
+    // サーバー保存が成功したら、画面上のマーカーも即時に消す。
+    // 直後に全体再取得すると古いスナップショットで一瞬復活することがあるため、
+    // 削除時はloadAll()を呼ばず、対象だけローカルから除去する。
+    pendingMarkerIds.delete(String(markerId));
+    const marker=overlayMarkers[markerId];
+    if(marker){
+      try{marker.setMap(null)}catch(e){}
+      delete overlayMarkers[markerId];
+    }
+    selectedMarker=null;
+    closeSheet('markerSheet');
+    finishProcessing('削除しました','マーカーを削除しました',650);
+  }catch(e){
+    locallyDeletedMarkerIds.delete(String(markerId));
+    failProcessing('削除に失敗しました',e.message||'もう一度お試しください',1300);
+  }
+}
+
+
+function clearRoute(){
+  try{
+    if(Array.isArray(routeLayer)){
+      routeLayer.forEach(line=>{
+        try{
+          if(line && typeof line.setMap==='function') line.setMap(null);
+        }catch(e){}
+      });
+    }else if(routeLayer && typeof routeLayer.setMap==='function'){
+      routeLayer.setMap(null);
+    }
+  }catch(e){}
+  routeLayer=null;
+  lastRouteMeters=0;
+  const box=$('routeInfo');
+  if(box){
+    box.dataset.routeMeters='';
+    box.innerHTML='📏 ホース敷設距離を計算中…';
+  }
+  const summary=$('routeSummary');
+  if(summary)summary.classList.add('hidden');
+}
+
+async function calculateRouteToWater(w){
+ clearRoute();
+ const box=$('routeInfo');
+ if(!incident){box.textContent='📏 火災現場がありません';return}
+ box.dataset.routeMeters='';box.innerHTML='📏 ホース敷設距離を計算中…';
+ try{
+  const {Route}=await google.maps.importLibrary('routes');
+  const request={origin:{lat:Number(incident.lat),lng:Number(incident.lng)},destination:{lat:Number(w.lat),lng:Number(w.lng)},travelMode:'WALKING',fields:['distanceMeters','path','warnings'],computeAlternativeRoutes:false};
+  const result=await Route.computeRoutes(request);
+  const route=result?.routes?.[0];
+  if(!route||!route.distanceMeters)throw new Error('ルートが取得できませんでした');
+  routeLayer=route.createPolylines();
+  routeLayer.forEach(line=>line.setMap(map));
+  const meters=Math.round(route.distanceMeters);
+  box.dataset.routeMeters=meters; lastRouteMeters=meters;
+  renderRouteInfo(meters,false,route.warnings||[]); $('routeSummary').textContent='📏 ホース敷設距離 '+meters+'m'; $('routeSummary').classList.remove('hidden');
+ }catch(e){
+  console.error('Route compute failed',e);
+  box.dataset.routeMeters='';
+  box.innerHTML='📏 <b>ホース敷設距離を取得できませんでした</b><br><span style="font-weight:600">直線 '+w.distance+'m を参考表示しています。</span>';
+ }
+}
+function renderRouteInfo(meters,fallback,warnings=[]){const hose=20,count=Math.ceil(meters/hose),extra=Math.max(1,count+1);$('routeInfo').innerHTML='<div class="route-card-title">📏 ホース敷設距離</div><div class="route-card-body"><div class="route-distance-box"><div class="route-distance-label">敷設距離</div><div class="route-main">'+meters+'m</div></div><div class="route-hose-box"><div><span class="route-hose-icon">🧯</span>20mホース：</div><div class="route-hose-count"><b>最低 '+count+'本</b> ／ 余裕をみて <b>'+extra+'本程度</b></div></div></div><div class="route-note">※徒歩ルートを基準にした敷設目安。実際は現場の通行状況を優先。</div>'+(warnings.length?'<div class="route-warning">※Googleの徒歩ルートに注意事項があります。</div>':'')+(fallback?'<div class="route-note">※参考値</div>':'')}
+function recalcHose(){const meters=Number($('routeInfo').dataset.routeMeters||0);if(meters)renderRouteInfo(meters,false)}
+
+function confirmEndIncident(){closeSheet('manageSheet');setTimeout(endIncident,50)}
+async function endIncident(){
+  if(!confirm('今回の現場を終了します。現場の履歴は残ります。\n本当に終了しますか？'))return;
+  stopSharedPolling();
+
+  // 現場セッションを無効化。終了前に開始された水利通信の結果を捨てる。
+  incidentSession++;
+
+  showProcessing('現場を終了中…','現場データを保存して終了しています');
+  try{
+    await api('endIncident');
+    finishLocalIncident();
+    finishProcessing('現場を終了しました','履歴として保存されました',900);
+  }catch(e){failProcessing('現場の終了に失敗しました',e.message||'もう一度お試しください',1500)}
+}
+
+// iPhone Safariの古いHTML/JSを再利用しにくくする
+try{
+ const navEntry=performance.getEntriesByType('navigation')[0];
+ if(navEntry&&navEntry.type==='reload'){/* 強制更新済み */}
+}catch(e){}
+
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
+loadGoogleMaps();
+
+// PWA: ホーム画面から起動した場合も最新のアプリ資産を利用
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js', {scope: './'})
+      .catch(err => console.warn('PWA service worker registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
