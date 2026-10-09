@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<!-- v88: 車両マーカー画像を地図と選択画面に統一 -->
+<!-- v93: 確定水利フラグ＋円形マーカー表示 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
@@ -28,7 +28,7 @@ button:disabled{opacity:.55;cursor:wait}
 .incident-title{display:flex;align-items:center;gap:6px}.searchbar{display:flex;align-items:center;gap:5px}.searchbar input{min-width:0;flex:1}
 .input{background:#f0f1f3;border:1px solid #d9dce0;border-radius:9px;padding:7px 9px;outline:none;height:34px;font-size:13px}.input:focus{border-color:#8ebeff;background:#fff}
 .btn{border-radius:9px;padding:8px 10px;font-weight:850;white-space:nowrap}.btn-primary{background:#111315;color:#fff}.btn-light{background:#eceef0;color:#15171a}
-.btn-red{background:var(--red);color:#fff}.btn-green{background:#dff7e8;color:#087b3d}.btn-orange{background:#e8f1ff;color:#075fb8}.btn-yellow{background:#fff7d6;color:#8a6800}.btn-blue{background:#e5f0ff;color:#0063d4}
+.btn-red{background:var(--red);color:#fff}.btn-green{background:#dff7e8;color:#087b3d}.btn-orange{background:#e8f1ff;color:#075fb8}.btn-yellow{background:#fff7d6;color:#8a6800}.btn-blue{background:#e5f0ff;color:#0063d4}.btn-confirmed{background:#e8f1ff;color:#075fb8;border:2px solid #1976d2;margin-top:7px;font-weight:900;min-height:40px}.btn-confirmed.is-confirmed{background:#1976d2;color:#fff}
 .coverage-note{font-size:10px;color:var(--muted);line-height:1.3}.address-display{font-size:12px;font-weight:800;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 #mapControls{position:absolute;right:10px;top:calc(env(safe-area-inset-top) + 92px);z-index:1050;display:flex;flex-direction:column;gap:7px}
 .fab{width:42px;height:42px;border-radius:13px;background:var(--panel);box-shadow:var(--shadow);font-size:19px}.fab:active{transform:scale(.96)}
@@ -68,7 +68,9 @@ body.marker-placement #map{cursor:crosshair}
 
 /* v21 mobile readability */
 .topbar{z-index:1400}.topcard{border-radius:12px}.searchbar .input{height:40px;font-size:16px}.searchbar .btn{height:40px;font-size:15px;padding:0 16px}.address-display{font-size:15px;line-height:1.3}.incident-title{min-height:36px}.chip{font-size:13px;padding:8px 10px}.chip b{font-size:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 66px);gap:6px}.chip{box-shadow:0 3px 12px rgba(0,0,0,.18)}
-.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:11px 12px}.route-card-title{font-size:16px}.route-card-body{grid-template-columns:minmax(125px,.85fr) 1.15fr;gap:11px}.route-distance-label{font-size:13px}.route-main{font-size:52px;line-height:.92}.route-hose-box{font-size:15px}.route-hose-count{font-size:15px}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:9px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}.marker-sheet .actiongrid.single-action{grid-template-columns:160px!important;justify-content:center}.marker-sheet .btn{min-height:40px}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.97);border-radius:16px;padding:9px 18px;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:21px;font-weight:950;color:#14548a;white-space:nowrap;border:1px solid rgba(20,84,138,.08)}.route-summary::first-letter{font-size:25px}.route-summary.hidden{display:none}
+.sheet{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:9px 11px 11px;border-radius:15px;max-height:45dvh}.sheet-title{font-size:18px}.distance{font-size:14px}.statusline{font-size:15px;padding:8px 10px}.route-card{font-size:14px;padding:11px 12px}.route-card-title{font-size:16px}.route-card-body{grid-template-columns:minmax(125px,.85fr) 1.15fr;gap:11px}.route-distance-label{font-size:13px}.route-main{font-size:52px;line-height:.92}.route-hose-box{font-size:15px}.route-hose-count{font-size:15px}.hose-row{font-size:14px}.hose-row select{font-size:14px;padding:7px 9px}.actiongrid button{min-height:42px;font-size:14px}.route-note{font-size:9px}.marker-add-sheet{max-height:none}.marker-add-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}.marker-add-btn{min-height:68px;border:0;border-radius:12px;background:#eef0f2;font-size:29px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.marker-add-btn span{font-size:13px}.marker-add-btn.road{background:#fff0ee}.marker-draw-sheet{max-height:none}.draw-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.draw-actions button{min-height:42px;font-size:14px}.mode{font-size:14px;padding:8px}.road-help{display:none}.marker-sheet{max-height:none}.marker-sheet .actiongrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}.marker-sheet .actiongrid.single-action{grid-template-columns:160px!important;justify-content:center}.marker-sheet .btn{min-height:40px}
+.vehicle-title{display:flex;align-items:center;gap:8px;font-weight:950}
+.vehicle-title img{width:34px;height:42px;object-fit:contain;display:block;flex:none}.route-summary{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:1200;background:rgba(255,255,255,.97);border-radius:16px;padding:9px 18px;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:21px;font-weight:950;color:#14548a;white-space:nowrap;border:1px solid rgba(20,84,138,.08)}.route-summary::first-letter{font-size:25px}.route-summary.hidden{display:none}
 @media(max-width:699px){.topbar{top:calc(env(safe-area-inset-top) + 6px)}#mapControls{top:calc(env(safe-area-inset-top) + 118px);right:8px;z-index:1600}.fab{width:50px;height:50px;font-size:24px;border-radius:15px}.stats{bottom:calc(env(safe-area-inset-bottom) + 70px)}}
 @media(max-width:380px){.route-card-body{grid-template-columns:minmax(108px,.78fr) 1.22fr;gap:8px}.route-main{font-size:45px}.route-hose-box,.route-hose-count{font-size:13px}.route-card-title{font-size:15px}.route-distance-label{font-size:12px}.route-note{font-size:8px}}
 
@@ -235,6 +237,18 @@ body.marker-placement #map{cursor:crosshair}
 }
 
 </style>
+
+  <meta name="theme-color" content="#1976d2">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="sui-Ri">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="apple-touch-icon-precomposed" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+
 </head>
 <body>
 <div id="app">
@@ -256,6 +270,7 @@ body.marker-placement #map{cursor:crosshair}
 
 <div id="mapControls">
  <button class="fab" onclick="openAddMenu()" title="マーカー追加">＋</button>
+ <button class="fab" onclick="refreshNow()" title="最新情報に更新">↻</button>
  <button class="fab" onclick="openManageMenu()" title="管理">☰</button>
 </div>
 
@@ -279,6 +294,7 @@ body.marker-placement #map{cursor:crosshair}
   <button id="waterBusyBtn" class="btn btn-orange" onclick="setWater('消防署使用中')">署使用</button>
   <button id="waterBadBtn" class="btn btn-red" onclick="setWater('使用困難')">使用困難</button>
  </div>
+ <button id="waterConfirmedBtn" class="btn btn-confirmed" onclick="toggleWaterConfirmed()">⭕ 確定水利にする</button>
 </div>
 
 <div id="markerSheet" class="sheet marker-sheet hidden">
@@ -338,7 +354,6 @@ body.marker-placement #map{cursor:crosshair}
   <button class="close" onclick="closeSheet('manageSheet')">×</button>
  </div>
  <div class="actiongrid">
-  <button class="btn btn-blue" onclick="refreshFromManage()">🔄 最新情報</button>
   <button class="btn btn-light" onclick="openHistory()">📋 過去の現場</button>
   <button class="btn btn-red" style="grid-column:1/-1" onclick="confirmEndIncident()">🛑 現場終了</button>
  </div>
@@ -417,6 +432,7 @@ let historyViewMode=false;
 let nearbyWaterClientCache=new Map();
 // 保存中の水利は、バックグラウンド同期で古い状態に戻さない。
 const pendingWaterSaves=new Map();
+const pendingWaterConfirmSaves=new Map();
 const defaultCenter={lat:35.5572,lng:139.7330};
 const $=id=>document.getElementById(id);
 function showIncidentBadge(){}
@@ -429,6 +445,38 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 function closeAllSheets(){document.querySelectorAll('.sheet').forEach(x=>x.classList.add('hidden'))}
 function closeSheet(id){$(id).classList.add('hidden');if(id==='drawSheet')cancelMarkerMode();if(id==='waterSheet'&&lastRouteMeters){$('routeSummary').textContent='📏 ホース敷設距離 '+lastRouteMeters+'m';$('routeSummary').classList.remove('hidden')}}
 function openManageMenu(){closeAllSheets();$('manageSheet').classList.remove('hidden')}
+
+async function refreshNow(){
+  if(!incident){
+    showToast('現在の現場がありません');
+    return;
+  }
+  if(syncBusy || waterSyncBusy){
+    showToast('更新中です。少しお待ちください');
+    return;
+  }
+
+  showProcessing('最新情報を更新中…','水利・現場マーカーの最新状態を取得しています');
+
+  try{
+    // 現在の現場・200m範囲・地図位置・配置済みマーカー等はそのまま維持。
+    // loadAll() は既存の同期処理を利用し、水利取得だけ完了まで待つ。
+    await loadAll(true);
+
+    const startedAt=Date.now();
+    while(waterSyncBusy && Date.now()-startedAt<20000){
+      await new Promise(resolve=>setTimeout(resolve,100));
+    }
+
+    if(waterSyncBusy){
+      throw new Error('水利情報の更新がまだ完了していません。');
+    }
+
+    finishProcessing('更新しました','最新情報を取得しました',650);
+  }catch(e){
+    failProcessing('更新に失敗しました',e.message||'もう一度お試しください',1300);
+  }
+}
 
 async function refreshFromManage(){
   if(!incident){showToast('現在の現場がありません');return}
@@ -525,7 +573,7 @@ async function openHistoryIncident(incidentId){
     renderIncident(incident);
     renderJurisdiction();
 
-    waterData=Array.isArray(d.water)?d.water:[];
+    waterData=Array.isArray(d.water)?d.water:[];waterData.forEach(w=>{w.confirmed=!!w.confirmed});
     waterData.forEach(addWaterMarker);
     renderStats();renderList();
     (d.markers||[]).forEach(addIncidentMarker);
@@ -824,7 +872,7 @@ async function searchFire(){
    clearRoute();clearOverlays();renderIncident(incident);renderJurisdiction();
    $('headerSub').textContent=incident.address;
    $('searchArea').classList.add('hidden');$('resultArea').classList.remove('hidden');showIncidentBadge();
-   waterData=d.water||[];waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
+   waterData=d.water||[];waterData.forEach(w=>{w.confirmed=!!w.confirmed});waterData.forEach(addWaterMarker);renderStats();renderList();(d.markers||[]).forEach(addIncidentMarker);
    startSharedPolling();startWaterStatusPolling();
    finishProcessing('現場を開始しました','周辺の水利を表示しています',700);
   }catch(e){
@@ -863,7 +911,8 @@ function addWaterMarker(w){
   const isTank=String(w.type||'').indexOf('防火水槽')>=0;
   const fill=color(w);
   const opacity=w.zone==='周辺'?.72:1;
-  const starSvg='<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"44\" height=\"44\" viewBox=\"0 0 44 44\"><polygon points=\"22,3 27.6,15.2 40.9,16.5 30.9,25.4 33.8,38.5 22,31.8 10.2,38.5 13.1,25.4 3.1,16.5 16.4,15.2\" fill=\"'+fill+'\" fill-opacity=\"'+opacity+'\" stroke=\"white\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>';
+  const confirmed=!!w.confirmed;
+  const starSvg='<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"44\" height=\"44\" viewBox=\"0 0 44 44\"><polygon points=\"26,5 32.4,19 47,20.4 36,30.2 39.2,44.5 26,37.2 12.8,44.5 16,30.2 5,20.4 19.6,19\" fill=\"'+fill+'\" fill-opacity=\"'+opacity+'\" stroke=\"white\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>';
   const marker=new google.maps.Marker({
     map,
     position:{lat:Number(w.lat),lng:Number(w.lng)},
@@ -871,15 +920,15 @@ function addWaterMarker(w){
     zIndex:100+(w.zone==='周辺'?0:10),
     icon:isTank?{
       url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(starSvg),
-      scaledSize:new google.maps.Size(30,30),
-      anchor:new google.maps.Point(15,15)
+      scaledSize:new google.maps.Size(34,34),
+      anchor:new google.maps.Point(17,17)
     }:{
       path:google.maps.SymbolPath.CIRCLE,
       scale:10,
       fillColor:fill,
       fillOpacity:opacity,
-      strokeColor:'#fff',
-      strokeWeight:3
+      strokeColor:confirmed?'#1565c0':'#fff',
+      strokeWeight:confirmed?6:3
     }
   });
   marker.setClickable(!addingMode);
@@ -908,8 +957,11 @@ async function refreshWaterInBackground(silent=true, session=incidentSession){
     if(Array.isArray(latest)){
       // 保存中の水利はサーバー側の古い状態で上書きしない。
       latest.forEach(w=>{
-        const pending=pendingWaterSaves.get(String(w.id));
+        const id=String(w.id);
+        const pending=pendingWaterSaves.get(id);
         if(pending)w.status=pending.status;
+        const pendingConfirmed=pendingWaterConfirmSaves.get(id);
+        if(pendingConfirmed)w.confirmed=pendingConfirmed.confirmed;
       });
       waterData=latest;
       nearbyWaterClientCache.set(Number(lat).toFixed(5)+','+Number(lng).toFixed(5)+','+Number(radius),latest);
@@ -936,14 +988,19 @@ async function syncWaterStatusesOnly(){
     if(seq!==waterStatusSeq || !incident || incident!==currentIncident)return;
     if(!result || String(result.incidentId)!==String(currentIncident.incidentId))return;
     const states=result.states||{};
+    const confirmedStates=result.confirmed||{};
     let changed=false;
     waterData.forEach(w=>{
       const id=String(w.id);
       // 自端末で保存中の水利は、古いポーリング結果で戻さない。
-      if(pendingWaterSaves.has(id))return;
-      if(!Object.prototype.hasOwnProperty.call(states,id))return;
-      const next=String(states[id]||'未確認');
-      if(w.status!==next){w.status=next;changed=true;}
+      if(!pendingWaterSaves.has(id)&&Object.prototype.hasOwnProperty.call(states,id)){
+        const next=String(states[id]||'未確認');
+        if(w.status!==next){w.status=next;changed=true;}
+      }
+      if(!pendingWaterConfirmSaves.has(id)&&Object.prototype.hasOwnProperty.call(confirmedStates,id)){
+        const nextConfirmed=!!confirmedStates[id];
+        if(!!w.confirmed!==nextConfirmed){w.confirmed=nextConfirmed;changed=true;}
+      }
     });
     if(changed){
       Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
@@ -976,7 +1033,7 @@ async function loadAll(silent=false){
     // まず現在端末のキャッシュを表示。ここでは通信を待たない。
     const cached=nearbyWaterClientCache.get(key);
     if(cached&&cached.length){
-      waterData=cached;
+      waterData=cached;waterData.forEach(w=>{w.confirmed=!!w.confirmed});
       Object.values(waterMarkers).forEach(m=>{
         try{if(m&&typeof m.setMap==='function')m.setMap(null)}catch(e){}
       });
@@ -1048,7 +1105,22 @@ function showWater(w){
  $('waterSheet').classList.remove('hidden');
  calculateRouteToWater(w);
 }
-function renderWaterStatus(){if(!selectedWater)return;$('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>';['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=historyViewMode)}
+function renderWaterStatus(){
+ if(!selectedWater)return;
+ $('waterStatus').innerHTML='状態：<span style="color:'+color(selectedWater)+'">'+escapeHtml(selectedWater.status||'未確認')+'</span>'+(selectedWater.confirmed?'　<span style="color:#1565c0;font-weight:900">⭕ 確定水利</span>':'');
+ ['waterOkBtn','waterBusyBtn','waterBadBtn','waterUnknownBtn'].forEach(id=>$(id).disabled=historyViewMode);
+ const b=$('waterConfirmedBtn');
+ if(b){b.disabled=historyViewMode;b.classList.toggle('is-confirmed',!!selectedWater.confirmed);b.textContent=selectedWater.confirmed?'⭕ 確定水利を解除':'⭕ 確定水利にする';}
+}
+async function toggleWaterConfirmed(){
+ if(!selectedWater||historyViewMode)return;
+ const water=selectedWater,id=String(water.id),next=!Boolean(water.confirmed),btn=$('waterConfirmedBtn');
+ if(btn)btn.disabled=true;
+ water.confirmed=next;pendingWaterConfirmSaves.set(id,{confirmed:next});addWaterMarkerRefresh(water);renderWaterStatus();
+ try{await api('saveWaterConfirmed',{waterId:id,confirmed:next});pendingWaterConfirmSaves.delete(id);showToast(next?'✓ 確定水利にしました':'確定水利を解除しました');}
+ catch(e){water.confirmed=!next;pendingWaterConfirmSaves.delete(id);addWaterMarkerRefresh(water);renderWaterStatus();showToast('確定水利の保存に失敗しました');}
+ finally{if(btn)btn.disabled=historyViewMode;}
+}
 async function setWater(status){
   if(!selectedWater||historyViewMode)return;
   const water=selectedWater;
@@ -1400,7 +1472,14 @@ function addIncidentMarker(m){
 function showMarkerInfo(m){
  selectedMarker=m;
  const isGuard=m.type==='guard';
- $('markerTitle').textContent=(m.type==='truck'?'🚒 ':m.type==='loader'?'🚚 ':isGuard?'🟢 ':'⛔ ')+(isGuard?((m.name||'A')+'地点'):(m.name||''));
+ if(m.type==='truck'||m.type==='loader'||m.type==='積載車'||m.type==='消防車'){
+  const isLoader=(m.type==='loader'||m.type==='積載車');
+  const addBtn=document.querySelector('button[onclick="startAdd(\''+(isLoader?'loader':'truck')+'\')"]');
+  const src=addBtn?.querySelector('img')?.src||'';
+  $('markerTitle').innerHTML='<span class="vehicle-title"><img src="'+src+'" alt="">'+escapeHtml(isLoader?'積載車':'消防車')+'</span>';
+}else{
+  $('markerTitle').textContent=(isGuard?'🟢 ':'⛔ ')+(isGuard?((m.name||'A')+'地点'):(m.name||''));
+}
  $('markerBody').textContent=m.type==='truck'?'消防車':m.type==='loader'?'積載車':isGuard?'警備配置地点':'通行止め区間';
  const move=$('moveMarkerBtn');
  const actionGrid=$('markerActionGrid');
@@ -1517,5 +1596,15 @@ try{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&incident)loadAll(true)});
 loadGoogleMaps();
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {scope: './'})
+      .catch(err => console.warn('Service Worker registration failed:', err));
+  });
+}
+</script>
+
 </body>
 </html>
