@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>sui-Ri</title>
+<title>sui-Ri v2</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -451,30 +451,83 @@ async function refreshNow(){
     showToast('現在の現場がありません');
     return;
   }
-  if(syncBusy || waterSyncBusy){
+  if(window.manualRefreshBusy){
     showToast('更新中です。少しお待ちください');
     return;
   }
 
-  showProcessing('最新情報を更新中…','水利・現場マーカーの最新状態を取得しています');
+  const currentIncident=incident;
+  const session=incidentSession;
+  window.manualRefreshBusy=true;
+  showProcessing('最新情報を更新中…','サーバーから水利・現場マーカーを取得しています');
 
   try{
-    // 現在の現場・200m範囲・地図位置・配置済みマーカー等はそのまま維持。
-    // loadAll() は既存の同期処理を利用し、水利取得だけ完了まで待つ。
-    await loadAll(true);
+    const lat=Number(currentIncident.lat);
+    const lng=Number(currentIncident.lng);
+    const radius=Number(currentIncident.radiusM||200);
 
-    const startedAt=Date.now();
-    while(waterSyncBusy && Date.now()-startedAt<20000){
-      await new Promise(resolve=>setTimeout(resolve,100));
+    // Force fresh requests to GAS. Do not rely on loadAll(), which may
+    // return early while another sync flag is set and refresh water in background.
+    const results=await Promise.all([
+      api('getNearbyWater',{lat,lng,radiusM:radius},20000),
+      api('getActiveMarkers',{},20000)
+    ]);
+
+    if(session!==incidentSession || !incident || incident!==currentIncident){
+      throw new Error('現場が切り替わったため更新を中止しました。');
     }
 
-    if(waterSyncBusy){
-      throw new Error('水利情報の更新がまだ完了していません。');
-    }
+    const latest=Array.isArray(results[0])?results[0]:null;
+    if(!latest)throw new Error('水利データを取得できませんでした。');
+    const markers=Array.isArray(results[1])?results[1]:[];
 
-    finishProcessing('更新しました','最新情報を取得しました',650);
+    // Preserve edits that this device is still saving.
+    latest.forEach(w=>{
+      const id=String(w.id);
+      const pending=pendingWaterSaves.get(id);
+      if(pending)w.status=pending.status;
+      const pendingConfirmed=pendingWaterConfirmSaves.get(id);
+      if(pendingConfirmed)w.confirmed=pendingConfirmed.confirmed;
+    });
+
+    const markerIds=new Set(markers.map(m=>String(m.markerId)));
+    locallyDeletedMarkerIds.forEach(id=>{
+      if(!markerIds.has(id))locallyDeletedMarkerIds.delete(id);
+    });
+    Object.keys(overlayMarkers).forEach(id=>{
+      if(id==='TEMP_ROAD'||locallyDeletedMarkerIds.has(String(id)))return;
+      if(!markerIds.has(String(id))){
+        try{overlayMarkers[id].setMap(null)}catch(e){}
+        delete overlayMarkers[id];
+      }
+    });
+    markers.forEach(m=>{
+      const id=String(m.markerId);
+      if(locallyDeletedMarkerIds.has(id))return;
+      const existing=overlayMarkers[id];
+      if(!existing){addIncidentMarker(m);return;}
+      if(m.type==='guard'&&typeof existing.setPosition==='function'){
+        const mlat=Number(m.lat),mlng=Number(m.lng);
+        if(isFinite(mlat)&&isFinite(mlng))existing.setPosition({lat:mlat,lng:mlng});
+      }
+      if(selectedMarker&&String(selectedMarker.markerId)===id){
+        selectedMarker=Object.assign(selectedMarker,m);
+      }
+    });
+
+    waterData=latest;
+    nearbyWaterClientCache.set(lat.toFixed(5)+','+lng.toFixed(5)+','+radius,latest);
+    Object.values(waterMarkers).forEach(m=>{try{m.setMap(null)}catch(e){}});
+    waterMarkers={};
+    waterData.forEach(addWaterMarker);
+    renderStats();
+    renderList();
+    finishProcessing('更新しました','水利・現場マーカーを最新状態にしました',650);
   }catch(e){
-    failProcessing('更新に失敗しました',e.message||'もう一度お試しください',1300);
+    console.error('manual refresh failed',e);
+    failProcessing('更新に失敗しました',e.message||'通信状態を確認して、もう一度お試しください',1800);
+  }finally{
+    window.manualRefreshBusy=false;
   }
 }
 
