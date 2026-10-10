@@ -1527,7 +1527,7 @@ function addIncidentMarker(m){
    strokeWeight:12,
    strokeOpacity:0.58,
    clickable:!addingMode,
-   zIndex:900
+   zIndex:10
   });
   line.addListener('click',()=>{
    if(!addingMode)showMarkerInfo(m);
@@ -1557,6 +1557,7 @@ function addIncidentMarker(m){
     map,
     position:{lat:Number(m.lat),lng:Number(m.lng)},
     title:m.name||(isLoader?'積載車':'消防車'),
+    zIndex:2000,
     icon:{
       url:iconUrl,
       scaledSize:new google.maps.Size(36,48),
