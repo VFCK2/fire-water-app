@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111315">
-<title>sui-Ri</title>
+<title>sui-Ri v2</title>
 <style>
 :root{
  --bg:#f3f4f6;--panel:rgba(255,255,255,.97);--text:#15171a;
@@ -451,7 +451,7 @@ async function refreshNow(){
   // 先にGASから現在の現場を取り直してから更新する。
   if(!incident){
     try{
-      const startup=await api('getStartupData',{},12000);
+      const startup=await api('getInitialData',{},12000);
       if(startup&&startup.incident){
         incident=startup.incident;
         incidentSession++;
@@ -695,7 +695,7 @@ async function loadStartupDataWithRetry(maxTry=4){
   let lastError=null;
   for(let attempt=1;attempt<=maxTry;attempt++){
     try{
-      const d=await api('getStartupData',{},7000);
+      const d=await api('getInitialData',{},7000);
       jurisdictionData=d?.jurisdiction||[];
       renderJurisdiction();
       incident=d?.incident||null;
@@ -785,9 +785,9 @@ async function syncActiveIncident(){
   incidentStateSyncBusy=true;
   const localIncident=incident;
   try{
-    // getStartupData は水利一覧を返さない軽量チェック。
+    // getInitialData は水利一覧を返さない軽量チェック。
     // 現場開始前の端末でも5秒ごとにここだけ確認する。
-    const state=await api('getStartupData',{},7000);
+    const state=await api('getInitialData',{},7000);
     const remote=state?.incident||null;
 
     if(!localIncident){
